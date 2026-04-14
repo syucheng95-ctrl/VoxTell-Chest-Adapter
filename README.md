@@ -6,6 +6,61 @@
 
 针对原模型在胸部 CT 细小病灶（如微小结节、间质性改变）分割中存在的“召回率高但精确度低（过分割）”问题，本项目通过两个阶段的迭代，提出了 **Adapter v2** 方案。
 
+### 0. 架构图解
+```mermaid
+graph TD
+    %% 输入层
+    subgraph Input_Stage [输入阶段]
+        V_Feat["3D 视觉特征 (B, N, C)"]
+        T_Emb["文本嵌入 (B, N, D)"]
+    end
+
+    %% 适配器内部逻辑
+    subgraph Adapter_v2 [ChestTextGuidedAdapter v2]
+        direction TB
+        F_Norm["LayerNorm (Vision)"]
+        T_Norm["LayerNorm (Text)"]
+        
+        %% 调制分支
+        MLP_Delta["MLP -> Tanh (Delta)"]
+        MLP_Gate["MLP -> Sigmoid * 0.25 (Group Gates)"]
+        
+        %% 门控逻辑
+        Expand["分组门控扩展示 (8 Groups)"]
+        
+        %% 融合
+        Multiply["元素级乘法 (Modulation)"]
+    end
+
+    %% 输出阶段
+    subgraph Output_Stage [输出阶段]
+        Residual["残差连接 (Residual + 0.1 * Modulated)"]
+        Decoder_In["进入 Transformer Decoder"]
+    end
+
+    %% 连线
+    V_Feat --> F_Norm
+    T_Emb --> T_Norm
+    
+    T_Norm --> MLP_Delta
+    T_Norm --> MLP_Gate
+    
+    MLP_Gate --> Expand
+    
+    F_Norm --> Multiply
+    MLP_Delta --> Multiply
+    Expand --> Multiply
+    
+    Multiply --> Residual
+    V_Feat --> Residual
+    Residual --> Decoder_In
+
+    %% 样式美化
+    style Adapter_v2 fill:#f9f,stroke:#333,stroke-width:2px
+    style Input_Stage fill:#bbf,stroke:#333
+    style Output_Stage fill:#bfb,stroke:#333
+```
+
 ### 1. 结构设计与演进
 - **v1 原型**：采用简单的 FiLM (Feature-wise Linear Modulation) 结构插在 Encoder 之后。实验发现，无约束的文本调制会导致模型过度响应文本描述，产生大面积误报。
 - **v2 (当前最佳)**：
