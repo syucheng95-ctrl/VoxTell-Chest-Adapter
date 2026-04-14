@@ -1,0 +1,34 @@
+# 1. 排除数据集和大型二进制文件
+datasets/
+hf_cache/
+models/
+outputs/
+*.pt
+*.pth
+*.bin
+*.onnx
+
+# 2. 排除 Python 和环境
+__pycache__/
+.venv/
+.env
+*.pyc
+.ipynb_checkpoints/
+node_modules/
+package-lock.json
+
+# 3. 排除 IDE 设置
+.idea/
+.vscode/
+
+# 4. 排除实验日志和临时文件
+logs/
+tmp/
+*.log
+status/
+
+# 5. 排除文档中的原始大文件（如 PDF/Word）
+docs/references/*.pdf
+docs/notes/*.docx
+docs/reports/*.docx
+改进方案.pdf
