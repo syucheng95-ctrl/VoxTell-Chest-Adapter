@@ -1,5 +1,6 @@
 # 1. 排除数据集和大型二进制文件
 datasets/
+!datasets/ReXGroundingCT_mirror_meta/
 hf_cache/
 models/
 outputs/

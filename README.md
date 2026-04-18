@@ -14,7 +14,14 @@
 | v5.1 | 0.2209 | 0.4080 | supervision / FP-aware 训练更成熟 |
 | v5.2 (200 step) | 0.1925 | 0.3124 | 更干净但 recall 掉太多 |
 | v6.4_stage3_fix | 0.2141 | 0.4234 | 修复 stage3 后稳定回到 baseline 上方 |
-| v6.5 | 0.2133 | 0.4242 | 当前最高 micro_dice，低 FP 稳健线 |
+| v6.5 | 0.2133 | 0.4242 | 稳健线冠军 |
+| v6.6 | 0.2126 | **0.4269** | **当前最高 micro_dice**，带 Masked 门控 |
+
+## 📥 资源下载 (Data & Models)
+
+- **模型 (v1.1)**: [Hugging Face](https://huggingface.co/mrokuss/VoxTell/tree/main/voxtell_v1.1) (放至 `models/voxtell_v1.1/`)
+- **数据 (Train50)**: [ReXRank官网](https://rexrank.ai/ReXGroundingCT/index.html) (放至 `datasets/ReXGroundingCT_train50/`)
+- **元数据 (Mirror)**: 已内置于 `datasets/ReXGroundingCT_mirror_meta/`
 
 阶段性结论：
 - `v5.1` 仍是当前 `mean_dice / recall` 最稳的 adapter 主线。
