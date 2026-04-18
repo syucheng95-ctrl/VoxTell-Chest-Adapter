@@ -37,6 +37,9 @@ from nnunetv2.preprocessing.cropping.cropping import crop_to_nonzero
 from nnunetv2.preprocessing.normalization.default_normalization_schemes import ZScoreNormalization
 from voxtell.model.v6_adapter_model import VoxTellV64AdapterModel
 from voxtell.model.v65_adapter_model import VoxTellV65AdapterModel
+from voxtell.model.v66_adapter_model import VoxTellV66AdapterModel
+from voxtell.model.v66b_adapter_model import VoxTellV66bAdapterModel
+from voxtell.model.v67_adapter_model import VoxTellV67AdapterModel
 from voxtell.model.voxtell_model import VoxTellModel
 from voxtell.utils.text_embedding import (
     build_text_representations,
@@ -309,6 +312,21 @@ def build_adapter_network(
             adapter_refine_scale=adapter_refine_scale,
             **common_kwargs,
         )
+    elif adapter_version == "v6_6":
+        network = VoxTellV66AdapterModel(
+            adapter_refine_scale=adapter_refine_scale,
+            **common_kwargs,
+        )
+    elif adapter_version == "v6_6b":
+        network = VoxTellV66bAdapterModel(
+            adapter_refine_scale=adapter_refine_scale,
+            **common_kwargs,
+        )
+    elif adapter_version == "v6_7":
+        network = VoxTellV67AdapterModel(
+            adapter_refine_scale=adapter_refine_scale,
+            **common_kwargs,
+        )
     else:
         network = VoxTellV64AdapterModel(**common_kwargs)
     network.to(device)
@@ -396,6 +414,7 @@ def get_stage_controls(args: argparse.Namespace, step: int) -> dict[str, float |
 
 
 def apply_training_stage(model: nn.Module, stage: str) -> None:
+    is_v67 = getattr(model, "adapter_version", None) == "v6_7"
     trainable_keys = {
         "stage1": (
             "text_guided_adapter.to_logit_context",
@@ -403,6 +422,10 @@ def apply_training_stage(model: nn.Module, stage: str) -> None:
             "text_guided_adapter.category_embedding",
         ),
         "stage2": (
+            "text_guided_adapter.to_logit_context",
+            "text_guided_adapter.logit_risk_head",
+            "text_guided_adapter.category_embedding",
+        ) if is_v67 else (
             "text_guided_adapter.to_logit_context",
             "text_guided_adapter.logit_risk_head",
             "text_guided_adapter.logit_refine_head",
@@ -1142,7 +1165,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--fp-aware-penalty-pred-scale", type=float, default=0.5)
     parser.add_argument("--pred-fg-threshold", type=float, default=0.5)
     parser.add_argument("--adapter-hidden-dim", type=int, default=1024)
-    parser.add_argument("--adapter-version", choices=["v6_4", "v6_5"], default="v6_4")
+    parser.add_argument("--adapter-version", choices=["v6_4", "v6_5", "v6_6", "v6_6b", "v6_7"], default="v6_4")
     parser.add_argument("--adapter-insertion-point", choices=["pre_decoder", "post_decoder"], default="pre_decoder")
     parser.add_argument("--adapter-num-groups", type=int, default=8)
     parser.add_argument("--adapter-risk-groups", type=int, default=None)

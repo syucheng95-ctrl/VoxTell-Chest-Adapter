@@ -84,7 +84,7 @@ def main() -> None:
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--force", action="store_true")
     parser.add_argument("--adapter-hidden-dim", type=int, default=1024)
-    parser.add_argument("--adapter-version", choices=["v6_4", "v6_5"], default="v6_4")
+    parser.add_argument("--adapter-version", choices=["v6_4", "v6_5", "v6_6", "v6_6b", "v6_7"], default="v6_4")
     parser.add_argument("--adapter-insertion-point", choices=["pre_decoder", "post_decoder"], default="pre_decoder")
     parser.add_argument("--adapter-num-groups", type=int, default=8)
     parser.add_argument("--adapter-candidate-scale", type=float, default=0.1)

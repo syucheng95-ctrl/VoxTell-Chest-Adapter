@@ -1,166 +1,134 @@
 # AGENT.md
 
-本文件面向进入本项目协作的智能体或开发者，记录当前主线、已验证结论、代码入口与工程约定。
+本文件面向进入本项目协作的智能体或开发者，记录当前主线、关键结论、代码入口与工程约定。
 
 ## 1. 项目目标
 
-本项目基于 `VoxTell + nnUNet`，面向胸部 CT finding segmentation，目标是在保住 case-level `mean_dice` 的同时，把 voxel-level `micro_dice` 拉回 baseline 以上。
+本项目基于 `VoxTell + nnUNet`，面向胸部 CT finding segmentation。当前目标不是重写视觉主干，而是：
+
+- 保住或提升 case-level `mean_dice`
+- 尽量把 voxel-level `micro_dice` 保持在 baseline 以上
+- 搞清楚后续真正值得投入的方向：数据、监督、训练、结构
 
 当前共识：
-- 主干 `nnUNet` 不是主战场。
+
+- `nnUNet` 主干不是当前主战场。
 - 纯重型 text-grounding 路线在当前数据规模下不稳定，不再作为主推主线。
-- 主线回到 adapter 系列，并继续围绕 `FP / micro_dice` 做结构和训练升级。
+- adapter 线已经接近“局部最优微调”上限，但仍然是很重要的对照和保底线。
 
-## 2. 当前结果与主线判断
+## 2. 当前版本总览
 
-已验证关键结果：
-- baseline：`mean_dice = 0.2139`，`micro_dice = 0.4228`
-- `v2`：`mean_dice = 0.2206`，`micro_dice = 0.4099`
-- `v4_catfix`：`mean_dice = 0.2214`，`micro_dice = 0.4054`
-- `v5.1`：`mean_dice = 0.2209`，`micro_dice = 0.4080`
-- `v6.4_stage3_fix`：`mean_dice = 0.2141`，`micro_dice = 0.4234`
-- `v6.5`：`mean_dice = 0.2133`，`micro_dice = 0.4242`
+### 2.1 关键结果表
 
-阶段性结论：
-- `v4` 是 adapter 系列里 `mean_dice / recall` 最强的一版，但偏激进。
-- `v5.1` 通过更强 supervision / FP-aware 训练把 `precision` 和 `micro_dice` 稍微拉回来了。
-- `v5.2`（去 category + 更干净 suppression）和 `v5.3`（弱 category + 软 suppression）都没有超过 `v5.1`。
-- `v6.4` 的原始 fullrun 失败主要是 `stage3` 训练设计问题，不再应简单归因为结构失效。
-- `v6.4_stage3_fix` 证明 `v6.4` 在修正训练后可以稳定回到 baseline 上方。
-- `v6.5` 在 `v6.4` 稳定主干上加入弱 refine/suppress 头后，没有翻车，并拿到了当前最高 `micro_dice`。
-- 之前的 raw-only / token-fusion / 3-stage grounding 大改在 full val 上明显退化，已降级为探索线。
+| 演进阶段 | 版本 | Mean Dice | Micro Dice | Precision | Recall | 定位与战果 |
+| --- | --- | ---: | ---: | ---: | ---: | --- |
+| 基准 | Baseline | 0.2139 | 0.4228 | 0.2493 | 0.3099 | 原始官方模型，参考线 |
+| 第一代 | v2 | 0.2206 | 0.4099 | 0.2435 | 0.3461 | 第一版稳定超过 baseline 的 adapter，证明“强约束 adapter”成立 |
+| 第一代 | v4_catfix | **0.2214** | 0.4054 | 0.2358 | **0.3524** | “激进派”：当前 `mean_dice / recall` 峰值，但 FP 偏多 |
+| 第二代 | v5.1 | 0.2209 | 0.4080 | 0.2372 | 0.3497 | supervision 重构成功版，综合最强的 recall/mean 对照 |
+| 第三代 | v6.4_stage3_fix | 0.2141 | 0.4234 | **0.2586** | 0.3089 | “洁癖派”：candidate+risk 落地后 precision 峰值 |
+| 第三代 | v6.5 | 0.2133 | 0.4242 | 0.2509 | 0.3069 | 当前 `v6` 稳健主干，`micro` 长期可复现强点 |
+| 第四代 | v6.6 | 0.2126 | **0.4269** | 0.2548 | 0.3016 | “极端派”：门控过硬，`micro` 最高但 recall 最低 |
+| 第四代 | v6.6b | 0.2146 | 0.4214 | 0.2565 | **0.3124** | “松绑版”：成功救回 recall/mean，失去 `micro` 优势 |
+| 当前 | v6.7 | 0.2146 | 0.4215 | 0.2565 | 0.3123 | “均衡派”：基本等价 `v6.6b`，没有形成新 Pareto 前沿 |
 
-当前主线判断：
-- 如果按 `mean_dice` 看，当前冠军仍是 `v4_catfix` / `v5.1` 这一档。
-- 如果按 `micro_dice` 看，当前冠军是 `v6.5`。
-- 如果按“综合稳定性 + 低 FP + 不低于 baseline 的 voxel 指标”看，当前最值得继续沿着做的是 `v6.5`，其次是 `v6.4_stage3_fix`。
+### 2.2 当前判断
 
-## 3. v6 系列当前进度
+- 如果按 `mean_dice / recall` 看，当前代表版仍是 `v4_catfix` 和 `v5.1`。
+- 如果按 `micro_dice` 看，当前最高点是 `v6.6`，但它过于保守，不适合作为唯一主线。
+- 如果按“稳定、低 FP、可继续扩展”看，`v6.5` 仍是更适合做结构基线的版本。
+- `v6.6b / v6.7` 证明 MSAR 的“局部化”思路不是错的，但只靠 adapter 小改已经很难再拉出明显新前沿。
 
-`v6` 的目标不是继续做重型文本融合，而是在旧 adapter 主线内部重写“提候选 / 扣误报”的职责分工。
+## 3. adapter 线真正学到了什么
 
-### A：suppression -> explicit FP risk head
-- 不再只是乘性抑制特征。
-- 单独建一条 `risk head`，显式预测 false-positive risk。
+- adapter 在当前设定下更像“行为调节器”，不太像能大幅重建表征的主引擎。
+- 更强结构约束比更重的文本调制更靠谱。
+- supervision 的收益通常比继续叠结构头更扎实。
+- 训练策略不是附属项，而是结构成败的一部分。
+- `candidate -> risk -> refine` 的职责拆分，是 `v6` 系列最有价值的遗产。
 
-### B：single-shot adapter -> candidate + reject/refine two-stage adapter
-- 不再一次性用文本对特征做加减法。
-- 改成两步：
-  - `candidate_head`：先提候选区域
-  - `risk_head`：再减去高风险误报
+## 4. 重复出现的坑
 
-阶段性版本结论：
-- `v6`：并联 candidate/risk residual，full val 证明是高 recall / massive FP，已淘汰。
-- `v6.1`：弱串联但仍停留在 feature-space 修补，和旧 `v6` 差异不够大，已淘汰。
-- `v6.2`：输出空间 rectification 第一次出现有效新行为，但 `200 step` probe 已显示后段开始失稳。
-- `v6.3`：把 `v6.2` 的后段不稳压住了，但基本收回到 `v5.2/v5.3` 的保守区间，没有形成更强平衡。
-- **`v6.4`：第一版工程上成立的 logit-level candidate/risk 双头。**
-  - 保留 `logit-level candidate + risk` 双头
-  - 弱 `category bias` 只作用于 candidate
-  - 训练改成 `candidate -> risk -> short joint` 的冻结式专训
-  - 原始 fullrun 因 `stage3` 解冻范围过大，出现高 recall / massive FP
-  - 修正后 `v6.4_stage3_fix`：`mean_dice = 0.2141`，`micro_dice = 0.4234`
-- **`v6.5`：当前最新探索版。**
-  - 在 `v6.4` 上增加 bounded serial `refine` 头
-  - 保留 `stage3` 只训 adapter，不再碰 `project_text_embed`
-  - fullrun 结果：`mean_dice = 0.2133`，`micro_dice = 0.4242`
-  - 当前结论：没有把 recall 拉高，但把低 FP / 高 micro 的稳健线又往前推了一点
+- 只要结构本质上在放大阳性响应，而没有精准 FP 约束，最后大概率就是高 recall、低 precision。
+- suppression / risk 很容易学成“整体保守化”，而不是精准打掉 FP。
+- 训练统计变好，不代表 full val 会变好。
+- 结构收益经常会被训练设计掩盖。
+- 经验参数一旦过多，结论会变得模糊，很难知道到底是思路成立还是调参碰巧。
 
-## 4. 关键代码入口
+## 5. 当前主线建议
 
-### v6.4 / v6.5 结构
+adapter 线可以收尾，但不应该再作为唯一主线。后续更值得投入的四条主线是：
+
+1. 数据：覆盖、采样、hard negative、小病灶、稀有类别
+2. 监督：FP-aware、boundary-aware、lesion-size-aware、category-aware supervision
+3. 训练：stage 设计、冻结/解冻、negative sampling schedule、部分主干训练
+4. 结构：每次只回答一个问题，避免继续滚“多头叠加式”版本树
+
+## 6. 关键代码入口
+
+### adapter 结构
+
 - `VoxTell/voxtell/model/chest_candidate_risk_adapter.py`
-  - `ChestCandidateRiskAdapter`
-  - `logit_candidate_head + logit_risk_head`
-  - 弱 category bias 只进入 candidate proposal
-- `VoxTell/voxtell/model/v6_adapter_model.py`
-  - `VoxTellV64AdapterModel`
-  - 保留原 VoxTell decoder/query 主干
-  - 最终在 output/logit 空间做 `candidate - risk` 组合
+  - `v6.4` 的 `candidate + risk` 双头
 - `VoxTell/voxtell/model/chest_candidate_risk_refine_adapter.py`
-  - `ChestCandidateRiskRefineAdapter`
-  - 在 `candidate + risk` 之外，再加一条弱 `refine` 抑制头
+  - `v6.5` 的 `candidate + risk + weak refine`
+- `VoxTell/voxtell/model/chest_masked_risk_refine_adapter.py`
+  - `v6.6` 的 `Masked Risk + Uncertainty Refine`
+- `VoxTell/voxtell/model/chest_masked_risk_refine_adapter_v66b.py`
+  - `v6.6b` 的少参数松绑版
+- `VoxTell/voxtell/model/chest_candidate_selective_risk_refine_adapter.py`
+  - `v6.7` 的 selective-risk 版
+
+### wrapper
+
+- `VoxTell/voxtell/model/v6_adapter_model.py`
 - `VoxTell/voxtell/model/v65_adapter_model.py`
-  - `VoxTellV65AdapterModel`
-  - 最终在 output/logit 空间做 `candidate - risk - weak_refine`
+- `VoxTell/voxtell/model/v66_adapter_model.py`
+- `VoxTell/voxtell/model/v66b_adapter_model.py`
+- `VoxTell/voxtell/model/v67_adapter_model.py`
 
-### 训练与验证入口
+### 训练与验证
+
 - `scripts/training/train_voxtell_adapter.py`
-  - 当前支持 `--adapter-version v6_4 / v6_5`
-  - `stage1` 主训 candidate
-  - `stage2` 主训 risk（`v6.5` 同时带 refine）
-  - `stage3` 只做短 joint 收尾
+  - 当前支持 `--adapter-version v6_4 / v6_5 / v6_6 / v6_6b / v6_7`
 - `scripts/experiments/run_voxtell_val_adapter_raw.py`
-  - 当前支持 `--adapter-version v6_4 / v6_5`
+  - 当前支持同样的 `adapter-version`
+- `scripts/analysis/evaluate_voxtell_val_adapter_raw.py`
+  - full val 后汇总指标
 
-### 历史主线结果
-- `outputs/voxtell_val_adapter_raw_v2_metrics.json`
-- `outputs/voxtell_val_adapter_raw_v4_catfix_metrics.json`
-- `outputs/voxtell_val_adapter_raw_v5_1_metrics.json`
-- `outputs/voxtell_val_adapter_raw_v5_2_pilot_200_metrics.json`
+## 7. 已完成验证状态
 
-## 5. v6.4 / v6.5 当前验证状态
+已完成：
 
-当前已完成：
-- `py_compile`
-- 标准 patch 单次前向
-- `v6.4 200-step pilot`
-- `v6.4 5-case probe val`
-- `v6.4 fullrun / step100 / step200 / stage3_fix`
-- `v6.5 fullrun / full val / evaluate`
+- `v6.6 full train + full val + evaluate`
+- `v6.6b full train + full val + evaluate`
+- `v6.7 full train + full val + evaluate`
+- `v6.7 vs v6.6b` 单 case 中间张量对比
 
-当前关键结论：
-- `v6.4` 把 `v6.2@200` 的后段不稳定性压住了
-- `v6.4` 原始 fullrun 的问题被定位为 `stage3` 训练设计问题，不是纯结构失效
-- `v6.4_stage3_fix` 和 `v6.5` 都已经证明可以稳定跑完 full val，不再是“不能 full”的状态
-- `v6.5` 当前是 `micro_dice` 冠军，但还没有把 `mean_dice / recall` 拉到 `v5.1` 那一档
+已确认结论：
 
-## 6. 训练与缓存约定
+- `v6.7` 不是“代码没生效”，而是“效果太弱，没把结果从 v6.6b 那个平衡点拉出来”。
+- adapter 线目前更像在同一个窄 Pareto 区间内重新分配 `precision / recall / micro / mean`。
+- 下一阶段真正更值得押注的，不是继续滚 adapter 小版本，而是四条主线的系统对比。
+
+## 8. 工程与空间约定
 
 ### Prompt cache
+
 - 能复用 `train_prompt_embeddings.pt` 就必须复用。
-- 统一使用：
-```powershell
-python scripts\training\train_voxtell_adapter.py --output-dir outputs\new_run --resume-prompt-cache-from outputs\some_previous_run
-```
 
 ### Smoke
+
 - `smoke` 只做链路验证。
 - 跑完即删，不长期保留。
 
 ### 保存逻辑
+
 - 默认不保存 `training_state.pt`。
 - 中间里程碑保存轻量 `adapter_step_xxxx.pt`。
-- 默认最多保留最近 3 个里程碑。
-- 如果最后一步正好是里程碑：
-  - 不再同时保留 `adapter_step_xxxx.pt + adapter_state.pt`
-  - 会直接转成单份 `adapter_state.pt`
-
-## 7. 空间管理现状
-
-当前 `outputs` 已清理到约 `14.6 GB`。
-
-保留策略：
-- 保留主结果：
-  - `v2`
-  - `v4`
-  - `v5.1`
-  - `v5.2_200`
-  - `v6.4_stage3_fix`
-  - `v6.5`
-- 已删除明显失败或过期的：
-  - `3stage` 系列大目录
-  - 旧 raw-only queryschedule 系列
-  - 重复 smoke 目录
-
-## 8. 下一步建议
-
-1. `v5.1` 仍是 `mean_dice / recall` 主线对照。
-2. `v6.5` 是当前 `micro_dice / 低 FP` 冠军。
-3. 如果继续做 `v6`，重点不再是“先防翻车”，而是：
-   - 怎么在保持 `v6.5` 低 FP 的前提下，把 recall 再拉回去。
+- final run 只保留 `adapter_state.pt`、`train_metrics.json` 和最终指标。
 
 ## 9. 一句话原则
 
 当前不再追求“更强文本主导”，而是追求：
-**先提候选，再在输出空间显式识别并扣除误报风险。**
+**先提候选，再显式识别并控制误报风险，同时把真正的瓶颈转移到数据、监督、训练和结构四条主线上。**

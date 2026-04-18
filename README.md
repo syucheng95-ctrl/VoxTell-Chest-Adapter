@@ -1,141 +1,98 @@
 # VoxTell-Chest
 
-基于 `VoxTell + nnUNet` 的胸部 CT finding segmentation 项目。项目重点不是重写视觉主干，而是在保持主干稳定的前提下，迭代文本引导 adapter，并尽量解决 `micro_dice` 被 false positive 拖累的问题。
+基于 `VoxTell + nnUNet` 的胸部 CT finding segmentation 项目。当前重点不是重写视觉主干，而是在保持主干稳定的前提下，围绕 adapter、监督和训练策略逐步优化 `mean_dice / micro_dice / precision / recall` 的平衡。
 
-## 当前状态
+## 当前总览
 
-当前已经跑出的主结果：
+### 版本演进总表
 
-| 版本 | Mean Dice | Micro Dice | 说明 |
-| --- | ---: | ---: | --- |
-| Baseline | 0.2139 | 0.4228 | 原始 VoxTell |
-| v2 | 0.2206 | 0.4099 | 第一版有效 adapter 主线 |
-| v4_catfix | 0.2214 | 0.4054 | recall / mean dice 最强，但偏激进 |
-| v5.1 | 0.2209 | 0.4080 | supervision / FP-aware 训练更成熟 |
-| v5.2 (200 step) | 0.1925 | 0.3124 | 更干净但 recall 掉太多 |
-| v6.4_stage3_fix | 0.2141 | 0.4234 | 修复 stage3 后稳定回到 baseline 上方 |
-| v6.5 | 0.2133 | 0.4242 | 稳健线冠军 |
-| v6.6 | 0.2126 | **0.4269** | **当前最高 micro_dice**，带 Masked 门控 |
+| 演进阶段 | 版本 | Mean Dice | Micro Dice | Precision | Recall | 定位与战果 |
+| --- | --- | ---: | ---: | ---: | ---: | --- |
+| 基准 | Baseline | 0.2139 | 0.4228 | 0.2493 | 0.3099 | 原始官方模型，参考线 |
+| 第一代 | v2 | 0.2206 | 0.4099 | 0.2435 | 0.3461 | 第一版稳定超过 baseline 的 adapter，证明“强约束 adapter”方向成立 |
+| 第一代 | v4_catfix | **0.2214** | 0.4054 | 0.2358 | **0.3524** | “激进派”：`mean_dice / recall` 最强，但 FP 偏多 |
+| 第二代 | v5.1 | 0.2209 | 0.4080 | 0.2372 | 0.3497 | supervision / FP-aware 重构成功版 |
+| 第三代 | v6.4_stage3_fix | 0.2141 | 0.4234 | **0.2586** | 0.3089 | “洁癖派”：candidate+risk 架构落地后 precision 峰值 |
+| 第三代 | v6.5 | 0.2133 | 0.4242 | 0.2509 | 0.3069 | `v6` 稳健主干，长期可复现的 `micro` 强点 |
+| 第四代 | v6.6 | 0.2126 | **0.4269** | 0.2548 | 0.3016 | “极端派”：门控过硬，`micro` 最高但 recall 最低 |
+| 第四代 | v6.6b | 0.2146 | 0.4214 | 0.2565 | **0.3124** | “松绑版”：救回 recall/mean，但丢了 `micro` 优势 |
+| 当前 | v6.7 | 0.2146 | 0.4215 | 0.2565 | 0.3123 | “均衡派”：基本等价 `v6.6b`，没有形成新 Pareto 前沿 |
 
-## 📥 资源下载 (Data & Models)
+### 当前判断
 
-- **模型 (v1.1)**: [Hugging Face](https://huggingface.co/mrokuss/VoxTell/tree/main/voxtell_v1.1) (放至 `models/voxtell_v1.1/`)
-- **数据 (Train50)**: [ReXRank官网](https://rexrank.ai/ReXGroundingCT/index.html) (放至 `datasets/ReXGroundingCT_train50/`)
-- **元数据 (Mirror)**: 已内置于 `datasets/ReXGroundingCT_mirror_meta/`
+- `v4_catfix / v5.1` 仍是 `mean_dice / recall` 最强对照。
+- `v6.6` 有最高 `micro_dice`，但行为过于保守，不适合作为唯一主线。
+- `v6.5` 仍是最适合继续当结构基线的 `v6` 版本。
+- `v6.6b / v6.7` 说明 adapter 局部化方向成立，但 adapter 线本身已经接近上限。
 
-阶段性结论：
-- `v5.1` 仍是当前 `mean_dice / recall` 最稳的 adapter 主线。
-- `v5.2 / v5.3` 证明“更强 suppression、更弱 category”会让模型更保守，但没有超过 `v5.1`。
-- 更重的 token-grounding / raw-only 文本融合路线在当前数据规模下 full val 不成立，已经降级为探索线。
-- `v6.4` 原始 fullrun 的失败已经定位为 `stage3` 训练设计问题，不再应简单看作结构完全失效。
-- `v6.5` 是当前 `micro_dice` 冠军，但还没有在 `mean_dice / recall` 上超过 `v5.1`。
+## adapter 线结论
 
-## 当前探索线：v6.4 / v6.5
+这条线不是失败的。它已经完成了两件很重要的事：
 
-`v6.4` 不再继续做重型 text-grounding，而是在旧 adapter 思路上做一次中等力度的结构升级。
+1. 找到了多个不同指标侧重下的 Pareto 点
+2. 帮我们定位出真正更值得投入的上层问题：数据、监督、训练、结构
 
-### A. suppression -> explicit FP risk head
-- 原来的 suppression 主要是 feature 级控制项。
-- `v6` 系列把它升级成显式的 `risk head`，直接预测 false-positive risk。
+当前更准确的判断是：
 
-### B. single-shot adapter -> candidate + reject/refine two-stage adapter
-- 原来 adapter 更像一次性调特征。
-- `v6.4` 当前实现是：
-  - `candidate head`：在 **logit 空间**提出候选
-  - `risk head`：在 **logit 空间**做局部误报审查
-  - 弱 `category bias` 只作用于 candidate，不再直接回写 feature
+- adapter 能稳定改行为风格
+- 但很难把所有指标一起显著推高
+- 在当前数据规模和训练设定下，它更像“决策边界调节器”，而不是“表征重建器”
 
-### 当前实现形式
+## 下一阶段主线
 
-`v6.4` 的 adapter 语义是：
+后续工作从“继续滚 adapter 小版本”转向四条更值得投入的主线：
 
-```text
-final_logit = candidate_logit - lambda * risk_logit
-```
-
-其中：
-- `candidate_logit` 对应“先提候选”
-- `risk_logit` 对应“再扣高风险误报”
-
-`v6.5` 在此基础上再加一条很弱的 refine/suppress 头：
-
-```text
-final_logit = candidate_logit - lambda * risk_logit - weak_refine_bias
-```
-
-它的目标不是进一步压结构，而是更平滑地回拉 risky positive。
+1. 数据：覆盖、采样、hard negative、小病灶、稀有类别
+2. 监督：FP-aware、boundary-aware、lesion-size-aware、category-aware supervision
+3. 训练：stage 设计、冻结/解冻、negative sampling schedule、部分主干训练
+4. 结构：每次只回答一个明确问题，避免继续多头叠加式试错
 
 ## 代码入口
 
-### v6.4 / v6.5 核心结构
+### adapter 核心结构
+
 - `VoxTell/voxtell/model/chest_candidate_risk_adapter.py`
-  - `ChestCandidateRiskAdapter`
-  - 实现 logit-level candidate/risk 双头 adapter
-- `VoxTell/voxtell/model/v6_adapter_model.py`
-  - `VoxTellV64AdapterModel`
-  - 保留原 VoxTell decoder/query 主干
 - `VoxTell/voxtell/model/chest_candidate_risk_refine_adapter.py`
-  - `ChestCandidateRiskRefineAdapter`
-  - 在 `candidate + risk` 外增加 bounded refine/suppress 头
+- `VoxTell/voxtell/model/chest_masked_risk_refine_adapter.py`
+- `VoxTell/voxtell/model/chest_masked_risk_refine_adapter_v66b.py`
+- `VoxTell/voxtell/model/chest_candidate_selective_risk_refine_adapter.py`
+
+### wrapper
+
+- `VoxTell/voxtell/model/v6_adapter_model.py`
 - `VoxTell/voxtell/model/v65_adapter_model.py`
-  - `VoxTellV65AdapterModel`
+- `VoxTell/voxtell/model/v66_adapter_model.py`
+- `VoxTell/voxtell/model/v66b_adapter_model.py`
+- `VoxTell/voxtell/model/v67_adapter_model.py`
 
-### 训练与验证
+### 训练、验证、评估
+
 - `scripts/training/train_voxtell_adapter.py`
-  - 当前支持 `--adapter-version v6_4 / v6_5`
-  - 使用 `candidate -> risk -> short joint` 的冻结式训练节奏
 - `scripts/experiments/run_voxtell_val_adapter_raw.py`
-  - 当前支持 `--adapter-version v6_4 / v6_5`
 - `scripts/analysis/evaluate_voxtell_val_adapter_raw.py`
-  - full val 后用于汇总指标
 
-## 当前工程状态
+## 📥 资源下载
 
-`v6.4 / v6.5` 当前是：
-- **结构代码已完成**
-- **训练与验证脚本已接入**
-- **静态语法检查已通过**
-- **标准 patch 前向已通过**
-- **`v6.4 fullrun/stage3_fix` 已完成**
-- **`v6.5 full train + full val + evaluate` 已完成**
-
-已确认通过的检查：
-- `py_compile`
-- 标准 patch 单次前向：
-  - `FORWARD_OK (1, 1, 192, 192, 192)`
-  - `RISK_OK`
-  - `CAND_OK`
-
-当前结论：
-- `v6.4` 的原始 fullrun 失败主因是 `stage3` 训练设计问题
-- `v6.4_stage3_fix` 修正后：`micro_dice = 0.4234`
-- `v6.5` 进一步拿到：`micro_dice = 0.4242`
-- 但这条线目前仍偏保守，`mean_dice / recall` 还没有超过 `v5.1`
+- 模型 `v1.1`：[Hugging Face](https://huggingface.co/mrokuss/VoxTell/tree/main/voxtell_v1.1)
+- 数据 `Train50`：[ReXRank 官网](https://rexrank.ai/ReXGroundingCT/index.html)
+- 元数据镜像：`datasets/ReXGroundingCT_mirror_meta/`
 
 ## 常用命令
 
 ### 训练
+
 ```powershell
 python scripts\training\train_voxtell_adapter.py --output-dir outputs\some_run --resume-prompt-cache-from outputs\some_previous_run
 ```
 
 ### 验证
+
 ```powershell
 python scripts\experiments\run_voxtell_val_adapter_raw.py --adapter-run-dir outputs\some_run --output-dir outputs\some_val_dir
 python scripts\analysis\evaluate_voxtell_val_adapter_raw.py --adapter-dir outputs\some_val_dir --output outputs\some_metrics.json
 ```
 
-## Prompt Cache 与存储约定
+## 文档索引
 
-- 优先复用 `train_prompt_embeddings.pt`
-- `smoke` 只做链路验证，跑完即删
-- 默认不保存 `training_state.pt`
-- 里程碑只保留轻量 `adapter_step_xxxx.pt`
-- 如果最后一步刚好是里程碑，不再双存 `adapter_step_xxxx.pt + adapter_state.pt`
-
-## 下一步
-
-当前最合理的顺序是：
-1. `v5.1` 仍作为 `mean_dice / recall` 主线对照
-2. `v6.5` 作为当前 `micro_dice / 低 FP` 冠军继续推进
-3. 如果继续做 `v6`，重点不是再压 FP，而是在不破坏 `v6.5` 稳定性的前提下把 recall 拉回来
+- adapter 线总结见 [实验记录/adapter线阶段总结.md](/C:/Users/Sunyucheng/Desktop/作业(大学相关）/生医工大赛/题目2-demo/实验记录/adapter线阶段总结.md)
+- 实验沉淀主文档见 [实验记录/README.md](/C:/Users/Sunyucheng/Desktop/作业(大学相关）/生医工大赛/题目2-demo/实验记录/README.md)

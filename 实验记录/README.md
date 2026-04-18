@@ -2,6 +2,12 @@
 
 本目录用于沉淀本项目已经完成的实验、当前结论、失败原因与下一步决策，避免后续重复试错。
 
+## 0. 快速入口
+
+- adapter 线阶段总结：[adapter线阶段总结.md](/C:/Users/Sunyucheng/Desktop/作业(大学相关）/生医工大赛/题目2-demo/实验记录/adapter线阶段总结.md)
+- 项目总览：[README.md](/C:/Users/Sunyucheng/Desktop/作业(大学相关）/生医工大赛/题目2-demo/README.md)
+- 协作说明：[AGENT.md](/C:/Users/Sunyucheng/Desktop/作业(大学相关）/生医工大赛/题目2-demo/AGENT.md)
+
 ## 1. 项目阶段
 
 当前项目围绕 `VoxTell` 在 `ReXGroundingCT` 数据上的胸部 CT finding grounding / segmentation 实验展开，主线经历了三个阶段：
