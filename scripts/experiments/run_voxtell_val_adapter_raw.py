@@ -22,7 +22,11 @@ os.environ.setdefault("HF_HUB_CACHE", str(ROOT / "hf_cache" / "hub"))
 
 from rex_prompt_tools import parse_finding
 from voxtell.inference.predictor import VoxTellPredictor
-from voxtell.utils.text_embedding import last_token_pool, wrap_with_instruction
+from voxtell.utils.text_embedding import (
+    build_text_representations,
+    collate_text_sequences,
+    wrap_with_instruction,
+)
 
 from train_voxtell_adapter import ADAPTER_STATE_NAME, build_adapter_network
 
@@ -33,7 +37,11 @@ MODEL_DIR = ROOT / "models" / "voxtell_v1.1"
 DEFAULT_OUTPUT_DIR = ROOT / "outputs" / "voxtell_val_adapter_raw"
 
 
-def embed_text_on_cpu(predictor: VoxTellPredictor, text_prompts: list[str], target_device: torch.device) -> torch.Tensor:
+def embed_text_on_cpu(
+    predictor: VoxTellPredictor,
+    text_prompts: list[str],
+    target_device: torch.device,
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     prompts = wrap_with_instruction(text_prompts)
     tokens = predictor.tokenizer(
         prompts,
@@ -45,8 +53,17 @@ def embed_text_on_cpu(predictor: VoxTellPredictor, text_prompts: list[str], targ
     with torch.inference_mode():
         predictor.text_backbone = predictor.text_backbone.to("cpu")
         outputs = predictor.text_backbone(**tokens)
-        embeddings = last_token_pool(outputs.last_hidden_state, tokens["attention_mask"])
-    return embeddings.view(1, len(text_prompts), -1).to(target_device)
+        pooled, token_sequences, token_masks = build_text_representations(
+            outputs.last_hidden_state,
+            tokens["attention_mask"],
+        )
+    token_embeddings, attention_mask = collate_text_sequences(
+        token_sequences,
+        token_masks,
+        device=target_device,
+        dtype=torch.float32,
+    )
+    return pooled.view(1, len(text_prompts), -1).to(target_device), token_embeddings, attention_mask
 
 
 def load_val_cases(limit: int | None) -> list[dict]:
@@ -67,10 +84,14 @@ def main() -> None:
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--force", action="store_true")
     parser.add_argument("--adapter-hidden-dim", type=int, default=1024)
+    parser.add_argument("--adapter-version", choices=["v6_4", "v6_5"], default="v6_4")
     parser.add_argument("--adapter-insertion-point", choices=["pre_decoder", "post_decoder"], default="pre_decoder")
     parser.add_argument("--adapter-num-groups", type=int, default=8)
-    parser.add_argument("--adapter-residual-scale", type=float, default=0.1)
+    parser.add_argument("--adapter-candidate-scale", type=float, default=0.1)
+    parser.add_argument("--adapter-risk-scale", type=float, default=0.08)
     parser.add_argument("--adapter-gate-cap", type=float, default=0.25)
+    parser.add_argument("--adapter-category-scale", type=float, default=0.2)
+    parser.add_argument("--adapter-refine-scale", type=float, default=0.035)
     args = parser.parse_args()
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
@@ -80,19 +101,24 @@ def main() -> None:
     print(f"Adapter run dir: {args.adapter_run_dir}")
     print(f"Output dir: {args.output_dir}")
 
-    predictor = VoxTellPredictor(model_dir=str(MODEL_DIR), device=device)
-    predictor.network = build_adapter_network(
-        device=device,
-        adapter_hidden_dim=args.adapter_hidden_dim,
-        adapter_insertion_point=args.adapter_insertion_point,
-        adapter_num_groups=args.adapter_num_groups,
-        adapter_residual_scale=args.adapter_residual_scale,
-        adapter_gate_cap=args.adapter_gate_cap,
-    )
     adapter_state_path = args.adapter_run_dir / ADAPTER_STATE_NAME
     if not adapter_state_path.exists():
         raise FileNotFoundError(f"Missing adapter state: {adapter_state_path}")
     state_dict = torch.load(adapter_state_path, map_location=device, weights_only=False)
+    predictor = VoxTellPredictor(model_dir=str(MODEL_DIR), device=device)
+    predictor.network = build_adapter_network(
+        device=device,
+        adapter_version=args.adapter_version,
+        adapter_hidden_dim=args.adapter_hidden_dim,
+        adapter_insertion_point=args.adapter_insertion_point,
+        adapter_num_groups=args.adapter_num_groups,
+        adapter_risk_groups=None,
+        adapter_candidate_scale=args.adapter_candidate_scale,
+        adapter_risk_scale=args.adapter_risk_scale,
+        adapter_gate_cap=args.adapter_gate_cap,
+        adapter_category_scale=args.adapter_category_scale,
+        adapter_refine_scale=args.adapter_refine_scale,
+    )
     predictor.network.load_state_dict(state_dict, strict=False)
     predictor.network.eval()
     io = NibabelIOWithReorient()
@@ -117,8 +143,25 @@ def main() -> None:
         image = np.asarray(image)
         preprocessed, bbox, original_shape = predictor.preprocess(image)
 
-        embeddings = embed_text_on_cpu(predictor, raw_prompts, device)
-        logits = predictor.predict_sliding_window_return_logits(preprocessed, embeddings).to("cpu")
+        embeddings, text_token_embeddings, text_attention_mask = embed_text_on_cpu(predictor, raw_prompts, device)
+        category_ids = torch.tensor(
+            [[
+                predictor.network.text_guided_adapter.CATEGORY_MAP.get(
+                    case["categories"].get(str(i)),
+                    0,
+                )
+                for i in sorted(map(int, case["findings"].keys()))
+            ]],
+            device=device,
+            dtype=torch.long,
+        )
+        logits = predictor.predict_sliding_window_return_logits(
+            preprocessed,
+            embeddings,
+            category_ids=category_ids,
+            text_token_embeddings=text_token_embeddings,
+            text_attention_mask=text_attention_mask,
+        ).to("cpu")
         with torch.no_grad():
             prediction = (torch.sigmoid(logits.float()) > 0.5).numpy().astype(np.uint8)
 

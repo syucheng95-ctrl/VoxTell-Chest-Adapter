@@ -13,7 +13,7 @@ from dynamic_network_architectures.initialization.weight_init import InitWeights
 from einops import rearrange, repeat
 from positional_encodings.torch_encodings import PositionalEncoding3D
 
-from voxtell.model.chest_text_guided_adapter import ChestTextGuidedAdapter
+from voxtell.model.text_guided_fusion import ScaleAwarePromptModulation, TokenToVoxelCrossAttention
 from voxtell.model.transformer import TransformerDecoder, TransformerDecoderLayer
 
 
@@ -74,12 +74,11 @@ class VoxTellModel(nn.Module):
         text_embedding_dim: int = 1024,
         num_heads: int = 1,
         project_to_decoder_hidden_dim: int = 432,
-        use_text_guided_adapter: bool = False,
-        adapter_hidden_dim: int = 1024,
-        adapter_insertion_point: str = "pre_decoder",
-        adapter_num_groups: int = 8,
-        adapter_residual_scale: float = 0.1,
-        adapter_gate_cap: float = 0.25,
+        use_token_to_voxel_fusion: bool = False,
+        token_fusion_hidden_dim: int = 1024,
+        token_fusion_heads: int = 4,
+        use_scale_aware_prompting: bool = False,
+        scale_prompt_hidden_dim: int = 1024,
     ) -> None:
         """
         Initialize the VoxTell model.
@@ -134,8 +133,11 @@ class VoxTellModel(nn.Module):
         self.query_dim = query_dim
         self.project_to_decoder_hidden_dim = project_to_decoder_hidden_dim
         self.text_embedding_dim = text_embedding_dim
-        self.use_text_guided_adapter = use_text_guided_adapter
-        self.adapter_insertion_point = adapter_insertion_point
+        self.num_maskformer_stages = num_maskformer_stages
+        self.last_token_fusion_delta_mean: float | None = None
+        self.last_token_gate_mean: float | None = None
+        self.query_runtime_scale = 1.0
+        self.last_query_scale: float | None = None
         
         # Initialize encoder backbone
         self.encoder = ResidualEncoder(
@@ -175,6 +177,12 @@ class VoxTellModel(nn.Module):
             nn.GELU(),
             nn.Linear(text_hidden_dim, query_dim),
         )
+        self.query_strength_logit = nn.Parameter(torch.tensor(-1.5))
+        self.project_prompt_context = nn.Sequential(
+            nn.Linear(self.text_embedding_dim, query_dim),
+            nn.GELU(),
+            nn.Linear(query_dim, query_dim),
+        )
 
         # Project decoder output to image channels for each mask-former stage
         self.project_to_decoder_channels = nn.ModuleList([
@@ -209,23 +217,48 @@ class VoxTellModel(nn.Module):
             num_layers=self.TRANSFORMER_NUM_LAYERS,
             norm=decoder_norm
         )
-        self.text_guided_adapter = (
-            ChestTextGuidedAdapter(
-                feature_dim=query_dim,
+        self.token_to_voxel_fusion = (
+            TokenToVoxelCrossAttention(
+                voxel_dim=query_dim,
                 text_dim=self.text_embedding_dim,
-                hidden_dim=adapter_hidden_dim,
-                num_groups=adapter_num_groups,
-                residual_scale=adapter_residual_scale,
-                gate_cap=adapter_gate_cap,
+                hidden_dim=token_fusion_hidden_dim,
+                num_heads=token_fusion_heads,
+                residual_scale=0.15,
             )
-            if use_text_guided_adapter
+            if use_token_to_voxel_fusion
             else None
         )
+        self.scale_aware_prompting = (
+            ScaleAwarePromptModulation(
+                query_dim=query_dim,
+                context_dim=query_dim,
+                num_scales=num_maskformer_stages,
+                hidden_dim=scale_prompt_hidden_dim,
+                residual_scale=0.1,
+            )
+            if use_scale_aware_prompting
+            else None
+        )
+
+    def set_fusion_schedule(self, fusion_strength: float, scale_strength: float | None = None) -> None:
+        if self.token_to_voxel_fusion is not None:
+            self.token_to_voxel_fusion.set_strength(fusion_strength)
+        if self.scale_aware_prompting is not None:
+            self.scale_aware_prompting.set_strength(fusion_strength if scale_strength is None else scale_strength)
+
+    def set_query_schedule(self, query_strength: float) -> None:
+        self.query_runtime_scale = max(0.0, float(query_strength))
 
     def forward(
         self,
         img: torch.Tensor,
-        text_embedding: torch.Tensor = None
+        text_embedding: torch.Tensor = None,
+        category_ids: torch.Tensor = None,
+        text_token_embeddings: torch.Tensor = None,
+        text_attention_mask: torch.Tensor = None,
+        category_text_embedding: torch.Tensor = None,
+        category_token_embeddings: torch.Tensor = None,
+        category_attention_mask: torch.Tensor = None,
     ) -> Union[torch.Tensor, List[torch.Tensor]]:
         """
         Forward pass through VoxTell model.
@@ -234,6 +267,7 @@ class VoxTellModel(nn.Module):
             img: Input image tensor of shape (B, C, D, H, W).
             text_embedding: Pre-computed text embeddings of shape (B, N, D) where
                 N is number of prompts and D is embedding dimension.
+            category_ids: Optional (B, N) tensor of category indices for each prompt.
             
         Returns:
             If deep_supervision is False, returns single prediction tensor of shape (B, N, D, H, W).
@@ -249,45 +283,58 @@ class VoxTellModel(nn.Module):
         # Shape: (B, C, D, H, W) -> (B, H, W, D, C) -> (B, H, W, D, query_dim)
         bottleneck_embed = rearrange(selected_feature, 'b c d h w -> b h w d c')
         bottleneck_embed = self.project_bottleneck_embed(bottleneck_embed)
-        # Shape: (B, H, W, D, query_dim) -> (H*W*D, B, query_dim) for transformer
-        bottleneck_embed = rearrange(bottleneck_embed, 'b h w d c -> (h w d) b c')
+        bottleneck_embed = rearrange(bottleneck_embed, 'b h w d c -> b (h w d) c')
 
         # Remove singleton dimension from text embeddings and project
         # Shape: (B, N, 1, D) -> (B, N, D)
         text_embedding = text_embedding.squeeze(2)
-        # Shape: (B, N, D) -> (N, B, D) as required by transformer decoder
-        text_embed = repeat(text_embedding, 'b n dim -> n b dim')
-        text_embed = self.project_text_embed(text_embed)
-        if self.text_guided_adapter is not None and self.adapter_insertion_point == "pre_decoder":
-            text_embed = repeat(text_embed, 'n b dim -> b n dim')
-            text_embed = self.text_guided_adapter(text_embed, text_embedding)
-            text_embed = repeat(text_embed, 'b n dim -> n b dim')
-
-        # Fuse text and image features through transformer decoder
-        # Output shape: (N, B, query_dim)
-        mask_embedding, _ = self.transformer_decoder(
-            tgt=text_embed,
-            memory=bottleneck_embed,
-            pos=self.pos_embed,
-            memory_key_padding_mask=None
-        )
-        # Shape: (N, B, query_dim) -> (B, N, query_dim)
-        mask_embedding = repeat(mask_embedding, 'n b dim -> b n dim')
-        if self.text_guided_adapter is not None and self.adapter_insertion_point == "post_decoder":
-            mask_embedding = self.text_guided_adapter(mask_embedding, text_embedding)
-
-        # Project mask embeddings to decoder channel dimensions for each stage
-        mask_embeddings = [
-            projection(mask_embedding)
-            for projection in self.project_to_decoder_channels
-        ]
-
-        # Generate segmentation outputs for each text prompt
-        outs = []
         num_prompts = text_embedding.shape[1]
+        learned_query_scale = torch.sigmoid(self.query_strength_logit)
+        text_query_embed = self.project_text_embed(text_embedding) * (learned_query_scale * self.query_runtime_scale)
+        prompt_context_raw = text_embedding
+        prompt_context_embed = self.project_prompt_context(text_embedding)
+        self.last_token_fusion_delta_mean = None
+        self.last_token_gate_mean = None
+        self.last_query_scale = float((learned_query_scale * self.query_runtime_scale).detach().cpu())
+
+        outs = []
         for prompt_idx in range(num_prompts):
-            # Extract embeddings for this prompt across all stages
-            prompt_embeds = [m[:, prompt_idx:prompt_idx + 1] for m in mask_embeddings]
+            query_embed = text_query_embed[:, prompt_idx:prompt_idx + 1]
+            raw_context = prompt_context_raw[:, prompt_idx:prompt_idx + 1]
+            context_embed = prompt_context_embed[:, prompt_idx:prompt_idx + 1]
+
+            conditioned_memory = bottleneck_embed
+            if self.token_to_voxel_fusion is not None and text_token_embeddings is not None:
+                prompt_tokens = text_token_embeddings[:, prompt_idx]
+                prompt_mask = text_attention_mask[:, prompt_idx] if text_attention_mask is not None else None
+                conditioned_memory = self.token_to_voxel_fusion(
+                    conditioned_memory,
+                    raw_context.squeeze(1),
+                    prompt_tokens,
+                    prompt_mask,
+                )
+                self.last_token_fusion_delta_mean = self.token_to_voxel_fusion.last_delta_mean
+                self.last_token_gate_mean = self.token_to_voxel_fusion.last_gate_mean
+
+            memory = rearrange(conditioned_memory, 'b m c -> m b c')
+            query = repeat(query_embed, 'b n dim -> n b dim')
+            mask_embedding, _ = self.transformer_decoder(
+                tgt=query,
+                memory=memory,
+                pos=self.pos_embed,
+                memory_key_padding_mask=None
+            )
+            mask_embedding = repeat(mask_embedding, 'n b dim -> b n dim')
+
+            stage_queries = (
+                self.scale_aware_prompting(mask_embedding, context_embed.squeeze(1))
+                if self.scale_aware_prompting is not None
+                else [mask_embedding for _ in range(self.num_maskformer_stages)]
+            )
+            prompt_embeds = [
+                projection(stage_query)
+                for projection, stage_query in zip(self.project_to_decoder_channels, stage_queries)
+            ]
             outs.append(self.decoder(skips, prompt_embeds))
         
         # Concatenate outputs across prompts for each scale

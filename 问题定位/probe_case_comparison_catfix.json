@@ -1,0 +1,900 @@
+{
+  "aggregate": {
+    "v3_catfix": {
+      "mean_dice": 0.2352013166839279,
+      "micro_dice": 0.5453554391182244,
+      "mean_precision": 0.24863148776153432,
+      "mean_recall": 0.33835011924838987,
+      "count": 16
+    },
+    "v4_catfix": {
+      "mean_dice": 0.24890216905569648,
+      "micro_dice": 0.5347904345002036,
+      "mean_precision": 0.22580516338921375,
+      "mean_recall": 0.3614553907008773,
+      "count": 16
+    },
+    "v4_probe_full": {
+      "mean_dice": 0.24891230185267124,
+      "micro_dice": 0.534786414756019,
+      "mean_precision": 0.2258532520535596,
+      "mean_recall": 0.36143124127776294,
+      "count": 16
+    },
+    "v4_no_suppression": {
+      "mean_dice": 0.24692029813809366,
+      "micro_dice": 0.5305502935445496,
+      "mean_precision": 0.22135116791306264,
+      "mean_recall": 0.364354859446159,
+      "count": 16
+    }
+  },
+  "cases": {
+    "train_13577_a_2.nii.gz": {
+      "v3_catfix": {
+        "mean_dice": 0.3779697624190065,
+        "micro_dice": 0.3779697624190065,
+        "mean_precision": 0.23385300668151449,
+        "mean_recall": 0.9849906191369606,
+        "mode": null
+      },
+      "v4_catfix": {
+        "mean_dice": 0.31541003304295584,
+        "micro_dice": 0.31541003304295584,
+        "mean_precision": 0.18776824034334763,
+        "mean_recall": 0.9849906191369606,
+        "mode": null
+      },
+      "v4_probe_full": {
+        "mean_dice": 0.3155048076923077,
+        "micro_dice": 0.3155048076923077,
+        "mean_precision": 0.18783542039355994,
+        "mean_recall": 0.9849906191369606,
+        "mode": "full"
+      },
+      "v4_no_suppression": {
+        "mean_dice": 0.3063904289466005,
+        "micro_dice": 0.3063904289466005,
+        "mean_precision": 0.18140981340704906,
+        "mean_recall": 0.9849906191369606,
+        "mode": "no_suppression"
+      }
+    },
+    "train_13316_a_2.nii.gz": {
+      "v3_catfix": {
+        "mean_dice": 0.544252926205644,
+        "micro_dice": 0.6758774564489831,
+        "mean_precision": 0.4580631307615769,
+        "mean_recall": 0.6749686429446052,
+        "mode": null
+      },
+      "v4_catfix": {
+        "mean_dice": 0.5339151376017736,
+        "micro_dice": 0.6762252346193952,
+        "mean_precision": 0.4595153678807746,
+        "mean_recall": 0.6497342389235644,
+        "mode": null
+      },
+      "v4_probe_full": {
+        "mean_dice": 0.533875929465932,
+        "micro_dice": 0.6761664784082023,
+        "mean_precision": 0.45946337464605297,
+        "mean_recall": 0.6497342389235644,
+        "mode": "full"
+      },
+      "v4_no_suppression": {
+        "mean_dice": 0.5333085659441092,
+        "micro_dice": 0.6754599097535577,
+        "mean_precision": 0.4585680078073061,
+        "mean_recall": 0.6498698137608746,
+        "mode": "no_suppression"
+      }
+    },
+    "train_13155_a_2.nii.gz": {
+      "v3_catfix": {
+        "mean_dice": 0.0015548069448043534,
+        "micro_dice": 0.0004743457980868053,
+        "mean_precision": 0.17647058823529413,
+        "mean_recall": 0.0007808433107756377,
+        "mode": null
+      },
+      "v4_catfix": {
+        "mean_dice": 0.10277561029985509,
+        "micro_dice": 0.06423744164982931,
+        "mean_precision": 0.08988106843439268,
+        "mean_recall": 0.11998958875585632,
+        "mode": null
+      },
+      "v4_probe_full": {
+        "mean_dice": 0.10283885850355323,
+        "micro_dice": 0.06420888795967199,
+        "mean_precision": 0.0900267083577617,
+        "mean_recall": 0.11990282838799236,
+        "mode": "full"
+      },
+      "v4_no_suppression": {
+        "mean_dice": 0.09610381055890393,
+        "micro_dice": 0.06600465968467958,
+        "mean_precision": 0.0774539470191644,
+        "mean_recall": 0.12658337671351727,
+        "mode": "no_suppression"
+      }
+    },
+    "train_13430_a_2.nii.gz": {
+      "v3_catfix": {
+        "mean_dice": 0.35398230088495575,
+        "micro_dice": 0.35398230088495575,
+        "mean_precision": 0.42105263157894735,
+        "mean_recall": 0.3053435114503817,
+        "mode": null
+      },
+      "v4_catfix": {
+        "mean_dice": 0.36752136752136755,
+        "micro_dice": 0.36752136752136755,
+        "mean_precision": 0.4174757281553398,
+        "mean_recall": 0.3282442748091603,
+        "mode": null
+      },
+      "v4_probe_full": {
+        "mean_dice": 0.36752136752136755,
+        "micro_dice": 0.36752136752136755,
+        "mean_precision": 0.4174757281553398,
+        "mean_recall": 0.3282442748091603,
+        "mode": "full"
+      },
+      "v4_no_suppression": {
+        "mean_dice": 0.36752136752136755,
+        "micro_dice": 0.36752136752136755,
+        "mean_precision": 0.4174757281553398,
+        "mean_recall": 0.3282442748091603,
+        "mode": "no_suppression"
+      }
+    },
+    "train_13417_d_1.nii.gz": {
+      "v3_catfix": {
+        "mean_dice": 0.0,
+        "micro_dice": 0.0,
+        "mean_precision": 0.0,
+        "mean_recall": 0.0,
+        "mode": null
+      },
+      "v4_catfix": {
+        "mean_dice": 0.0,
+        "micro_dice": 0.0,
+        "mean_precision": 0.0,
+        "mean_recall": 0.0,
+        "mode": null
+      },
+      "v4_probe_full": {
+        "mean_dice": 0.0,
+        "micro_dice": 0.0,
+        "mean_precision": 0.0,
+        "mean_recall": 0.0,
+        "mode": "full"
+      },
+      "v4_no_suppression": {
+        "mean_dice": 0.0,
+        "micro_dice": 0.0,
+        "mean_precision": 0.0,
+        "mean_recall": 0.0,
+        "mode": "no_suppression"
+      }
+    },
+    "train_13444_a_2.nii.gz": {
+      "v3_catfix": {
+        "mean_dice": 0.0,
+        "micro_dice": 0.0,
+        "mean_precision": 0.0,
+        "mean_recall": 0.0,
+        "mode": null
+      },
+      "v4_catfix": {
+        "mean_dice": 0.0,
+        "micro_dice": 0.0,
+        "mean_precision": 0.0,
+        "mean_recall": 0.0,
+        "mode": null
+      },
+      "v4_probe_full": {
+        "mean_dice": 0.0,
+        "micro_dice": 0.0,
+        "mean_precision": 0.0,
+        "mean_recall": 0.0,
+        "mode": "full"
+      },
+      "v4_no_suppression": {
+        "mean_dice": 0.0,
+        "micro_dice": 0.0,
+        "mean_precision": 0.0,
+        "mean_recall": 0.0,
+        "mode": "no_suppression"
+      }
+    },
+    "train_13583_d_2.nii.gz": {
+      "v3_catfix": {
+        "mean_dice": 0.41069819695588333,
+        "micro_dice": 0.44617405204010135,
+        "mean_precision": 0.3893273451591475,
+        "mean_recall": 0.6156678751454375,
+        "mode": null
+      },
+      "v4_catfix": {
+        "mean_dice": 0.4063815964626724,
+        "micro_dice": 0.43346732956308,
+        "mean_precision": 0.37766380866633664,
+        "mean_recall": 0.626246085797633,
+        "mode": null
+      },
+      "v4_probe_full": {
+        "mean_dice": 0.40635654407434885,
+        "micro_dice": 0.4334442915366751,
+        "mean_precision": 0.37764173273616225,
+        "mean_recall": 0.6261894922854213,
+        "mode": "full"
+      },
+      "v4_no_suppression": {
+        "mean_dice": 0.40577047159319396,
+        "micro_dice": 0.42827009684669304,
+        "mean_precision": 0.3753972237848789,
+        "mean_recall": 0.6342926847511249,
+        "mode": "no_suppression"
+      }
+    },
+    "train_13292_a_2.nii.gz": {
+      "v3_catfix": {
+        "mean_dice": 0.23533471317517782,
+        "micro_dice": 0.680352228072809,
+        "mean_precision": 0.23655936807253616,
+        "mean_recall": 0.3079947787096821,
+        "mode": null
+      },
+      "v4_catfix": {
+        "mean_dice": 0.23473380294523027,
+        "micro_dice": 0.6777605259268199,
+        "mean_precision": 0.22865775955499837,
+        "mean_recall": 0.31062528525343974,
+        "mode": null
+      },
+      "v4_probe_full": {
+        "mean_dice": 0.23474419592116488,
+        "micro_dice": 0.6777738875173536,
+        "mean_precision": 0.22880293724472522,
+        "mean_recall": 0.3106398422102387,
+        "mode": "full"
+      },
+      "v4_no_suppression": {
+        "mean_dice": 0.23485766513233944,
+        "micro_dice": 0.677267061794434,
+        "mean_precision": 0.22234787233995715,
+        "mean_recall": 0.3113583484255822,
+        "mode": "no_suppression"
+      }
+    }
+  },
+  "items": {
+    "train_13577_a_2.nii.gz::0": {
+      "case": "train_13577_a_2.nii.gz",
+      "index": 0,
+      "category_name": "ground_glass_opacity",
+      "lesion_name": "ground-glass opacity",
+      "raw_prompt": "Focal ground glass opacity in the laterobasal segment of the right lower lobe",
+      "v3_catfix": {
+        "dice": 0.3779697624190065,
+        "precision": 0.23385300668151449,
+        "recall": 0.9849906191369606,
+        "pred_voxels": 2245,
+        "gt_voxels": 533,
+        "suppression_mean": null
+      },
+      "v4_catfix": {
+        "dice": 0.31541003304295584,
+        "precision": 0.18776824034334763,
+        "recall": 0.9849906191369606,
+        "pred_voxels": 2796,
+        "gt_voxels": 533,
+        "suppression_mean": null
+      },
+      "v4_probe_full": {
+        "dice": 0.3155048076923077,
+        "precision": 0.18783542039355994,
+        "recall": 0.9849906191369606,
+        "pred_voxels": 2795,
+        "gt_voxels": 533,
+        "suppression_mean": 0.56341552734375
+      },
+      "v4_no_suppression": {
+        "dice": 0.3063904289466005,
+        "precision": 0.18140981340704906,
+        "recall": 0.9849906191369606,
+        "pred_voxels": 2894,
+        "gt_voxels": 533,
+        "suppression_mean": 0.56341552734375
+      }
+    },
+    "train_13316_a_2.nii.gz::0": {
+      "case": "train_13316_a_2.nii.gz",
+      "index": 0,
+      "category_name": "nodule",
+      "lesion_name": "nodule",
+      "raw_prompt": "Multiple parenchymal nodules in both lungs",
+      "v3_catfix": {
+        "dice": 0.336615096108767,
+        "precision": 0.3024431339511373,
+        "recall": 0.379492600422833,
+        "pred_voxels": 1187,
+        "gt_voxels": 946,
+        "suppression_mean": null
+      },
+      "v4_catfix": {
+        "dice": 0.318484383000512,
+        "precision": 0.30883813306852037,
+        "recall": 0.3287526427061311,
+        "pred_voxels": 1007,
+        "gt_voxels": 946,
+        "suppression_mean": null
+      },
+      "v4_probe_full": {
+        "dice": 0.318484383000512,
+        "precision": 0.30883813306852037,
+        "recall": 0.3287526427061311,
+        "pred_voxels": 1007,
+        "gt_voxels": 946,
+        "suppression_mean": 0.418914794921875
+      },
+      "v4_no_suppression": {
+        "dice": 0.31815856777493606,
+        "precision": 0.30822596630327054,
+        "recall": 0.3287526427061311,
+        "pred_voxels": 1009,
+        "gt_voxels": 946,
+        "suppression_mean": 0.418914794921875
+      }
+    },
+    "train_13316_a_2.nii.gz::1": {
+      "case": "train_13316_a_2.nii.gz",
+      "index": 1,
+      "category_name": "nodule",
+      "lesion_name": "nodule",
+      "raw_prompt": "Largest nodule in the anterobasal segment of the lower lobe of the left lung, measuring 18x15 mm",
+      "v3_catfix": {
+        "dice": 0.751890756302521,
+        "precision": 0.6136831275720165,
+        "recall": 0.9704446854663774,
+        "pred_voxels": 5832,
+        "gt_voxels": 3688,
+        "suppression_mean": null
+      },
+      "v4_catfix": {
+        "dice": 0.749345892203035,
+        "precision": 0.6101926026930288,
+        "recall": 0.9707158351409978,
+        "pred_voxels": 5867,
+        "gt_voxels": 3688,
+        "suppression_mean": null
+      },
+      "v4_probe_full": {
+        "dice": 0.749267475931352,
+        "precision": 0.6100886162235856,
+        "recall": 0.9707158351409978,
+        "pred_voxels": 5868,
+        "gt_voxels": 3688,
+        "suppression_mean": 0.388427734375
+      },
+      "v4_no_suppression": {
+        "dice": 0.7484585641132825,
+        "precision": 0.6089100493113416,
+        "recall": 0.9709869848156182,
+        "pred_voxels": 5881,
+        "gt_voxels": 3688,
+        "suppression_mean": 0.388427734375
+      }
+    },
+    "train_13155_a_2.nii.gz::0": {
+      "case": "train_13155_a_2.nii.gz",
+      "index": 0,
+      "category_name": "emphysema",
+      "lesion_name": "emphysema",
+      "raw_prompt": "More prominent emphysematous changes in the upper lobes of both lungs",
+      "v3_catfix": {
+        "dice": 0.00466442083441306,
+        "precision": 0.5294117647058824,
+        "recall": 0.002342529932326913,
+        "pred_voxels": 17,
+        "gt_voxels": 3842,
+        "suppression_mean": null
+      },
+      "v4_catfix": {
+        "dice": 0.30832683089956525,
+        "precision": 0.26964320530317804,
+        "recall": 0.35996876626756896,
+        "pred_voxels": 5129,
+        "gt_voxels": 3842,
+        "suppression_mean": null
+      },
+      "v4_probe_full": {
+        "dice": 0.3085165755106597,
+        "precision": 0.2700801250732851,
+        "recall": 0.3597084851639771,
+        "pred_voxels": 5117,
+        "gt_voxels": 3842,
+        "suppression_mean": 0.35235595703125
+      },
+      "v4_no_suppression": {
+        "dice": 0.2883114316767118,
+        "precision": 0.23236184105749322,
+        "recall": 0.3797501301405518,
+        "pred_voxels": 6279,
+        "gt_voxels": 3842,
+        "suppression_mean": 0.35235595703125
+      }
+    },
+    "train_13155_a_2.nii.gz::1": {
+      "case": "train_13155_a_2.nii.gz",
+      "index": 1,
+      "category_name": "nodule",
+      "lesion_name": "nodule",
+      "raw_prompt": "Several subcentimeter nodules in both lungs, measuring less than 3 mm in short diameter",
+      "v3_catfix": {
+        "dice": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "pred_voxels": 0,
+        "gt_voxels": 140,
+        "suppression_mean": null
+      },
+      "v4_catfix": {
+        "dice": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "pred_voxels": 0,
+        "gt_voxels": 140,
+        "suppression_mean": null
+      },
+      "v4_probe_full": {
+        "dice": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "pred_voxels": 0,
+        "gt_voxels": 140,
+        "suppression_mean": 0.4041748046875
+      },
+      "v4_no_suppression": {
+        "dice": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "pred_voxels": 0,
+        "gt_voxels": 140,
+        "suppression_mean": 0.4041748046875
+      }
+    },
+    "train_13155_a_2.nii.gz::2": {
+      "case": "train_13155_a_2.nii.gz",
+      "index": 2,
+      "category_name": "atelectasis",
+      "lesion_name": "atelectasis",
+      "raw_prompt": "Areas of linear atelectasis in both lungs",
+      "v3_catfix": {
+        "dice": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "pred_voxels": 0,
+        "gt_voxels": 33948,
+        "suppression_mean": null
+      },
+      "v4_catfix": {
+        "dice": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "pred_voxels": 0,
+        "gt_voxels": 33948,
+        "suppression_mean": null
+      },
+      "v4_probe_full": {
+        "dice": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "pred_voxels": 0,
+        "gt_voxels": 33948,
+        "suppression_mean": 0.524688720703125
+      },
+      "v4_no_suppression": {
+        "dice": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "pred_voxels": 0,
+        "gt_voxels": 33948,
+        "suppression_mean": 0.524688720703125
+      }
+    },
+    "train_13430_a_2.nii.gz::0": {
+      "case": "train_13430_a_2.nii.gz",
+      "index": 0,
+      "category_name": "nodule",
+      "lesion_name": "nodule",
+      "raw_prompt": "Pleural-based nodule measuring 5x3 mm in the superior segment of the lower lobe of the right lung",
+      "v3_catfix": {
+        "dice": 0.35398230088495575,
+        "precision": 0.42105263157894735,
+        "recall": 0.3053435114503817,
+        "pred_voxels": 95,
+        "gt_voxels": 131,
+        "suppression_mean": null
+      },
+      "v4_catfix": {
+        "dice": 0.36752136752136755,
+        "precision": 0.4174757281553398,
+        "recall": 0.3282442748091603,
+        "pred_voxels": 103,
+        "gt_voxels": 131,
+        "suppression_mean": null
+      },
+      "v4_probe_full": {
+        "dice": 0.36752136752136755,
+        "precision": 0.4174757281553398,
+        "recall": 0.3282442748091603,
+        "pred_voxels": 103,
+        "gt_voxels": 131,
+        "suppression_mean": 0.398040771484375
+      },
+      "v4_no_suppression": {
+        "dice": 0.36752136752136755,
+        "precision": 0.4174757281553398,
+        "recall": 0.3282442748091603,
+        "pred_voxels": 103,
+        "gt_voxels": 131,
+        "suppression_mean": 0.398040771484375
+      }
+    },
+    "train_13417_d_1.nii.gz::0": {
+      "case": "train_13417_d_1.nii.gz",
+      "index": 0,
+      "category_name": "nodule",
+      "lesion_name": "nodule",
+      "raw_prompt": "Stable 3 mm subcentimeter nodule near the subpleural area in the laterobasal segment of the left lower lobe",
+      "v3_catfix": {
+        "dice": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "pred_voxels": 0,
+        "gt_voxels": 44,
+        "suppression_mean": null
+      },
+      "v4_catfix": {
+        "dice": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "pred_voxels": 0,
+        "gt_voxels": 44,
+        "suppression_mean": null
+      },
+      "v4_probe_full": {
+        "dice": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "pred_voxels": 0,
+        "gt_voxels": 44,
+        "suppression_mean": 0.3797607421875
+      },
+      "v4_no_suppression": {
+        "dice": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "pred_voxels": 0,
+        "gt_voxels": 44,
+        "suppression_mean": 0.3797607421875
+      }
+    },
+    "train_13417_d_1.nii.gz::1": {
+      "case": "train_13417_d_1.nii.gz",
+      "index": 1,
+      "category_name": "atelectasis",
+      "lesion_name": "fibrosis",
+      "raw_prompt": "Fibrotic subcentimeter densities in the lower lobe of the right lung",
+      "v3_catfix": {
+        "dice": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "pred_voxels": 1809,
+        "gt_voxels": 116,
+        "suppression_mean": null
+      },
+      "v4_catfix": {
+        "dice": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "pred_voxels": 2411,
+        "gt_voxels": 116,
+        "suppression_mean": null
+      },
+      "v4_probe_full": {
+        "dice": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "pred_voxels": 2414,
+        "gt_voxels": 116,
+        "suppression_mean": 0.50958251953125
+      },
+      "v4_no_suppression": {
+        "dice": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "pred_voxels": 2615,
+        "gt_voxels": 116,
+        "suppression_mean": 0.50958251953125
+      }
+    },
+    "train_13444_a_2.nii.gz::0": {
+      "case": "train_13444_a_2.nii.gz",
+      "index": 0,
+      "category_name": "nodule",
+      "lesion_name": "nodule",
+      "raw_prompt": "One or two nonspecific parenchymal nodules in both lungs",
+      "v3_catfix": {
+        "dice": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "pred_voxels": 0,
+        "gt_voxels": 196,
+        "suppression_mean": null
+      },
+      "v4_catfix": {
+        "dice": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "pred_voxels": 0,
+        "gt_voxels": 196,
+        "suppression_mean": null
+      },
+      "v4_probe_full": {
+        "dice": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "pred_voxels": 0,
+        "gt_voxels": 196,
+        "suppression_mean": 0.419952392578125
+      },
+      "v4_no_suppression": {
+        "dice": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "pred_voxels": 1,
+        "gt_voxels": 196,
+        "suppression_mean": 0.419952392578125
+      }
+    },
+    "train_13583_d_2.nii.gz::0": {
+      "case": "train_13583_d_2.nii.gz",
+      "index": 0,
+      "category_name": "mass",
+      "lesion_name": "pleural effusion",
+      "raw_prompt": "Progressive pleural effusion reaching a diameter of 3 cm between the leaves of the right pleura",
+      "v3_catfix": {
+        "dice": 0.6660899936151179,
+        "precision": 0.7456812197130867,
+        "recall": 0.6018506996068055,
+        "pred_voxels": 739387,
+        "gt_voxels": 916086,
+        "suppression_mean": null
+      },
+      "v4_catfix": {
+        "dice": 0.6767515754474436,
+        "precision": 0.7363040252224681,
+        "recall": 0.6261115222806592,
+        "pred_voxels": 778988,
+        "gt_voxels": 916086,
+        "suppression_mean": null
+      },
+      "v4_probe_full": {
+        "dice": 0.676717997001945,
+        "precision": 0.7362547223217071,
+        "recall": 0.6260896902692542,
+        "pred_voxels": 779013,
+        "gt_voxels": 916086,
+        "suppression_mean": 0.56060791015625
+      },
+      "v4_no_suppression": {
+        "dice": 0.6785162696074486,
+        "precision": 0.7345958783265513,
+        "recall": 0.6303916881166178,
+        "pred_voxels": 786137,
+        "gt_voxels": 916086,
+        "suppression_mean": 0.56060791015625
+      }
+    },
+    "train_13583_d_2.nii.gz::1": {
+      "case": "train_13583_d_2.nii.gz",
+      "index": 1,
+      "category_name": "consolidation",
+      "lesion_name": "consolidation",
+      "raw_prompt": "Extensive consolidation areas in all segments of both lungs",
+      "v3_catfix": {
+        "dice": 0.02807175466564271,
+        "precision": 0.014482457942172466,
+        "recall": 0.4551787491387889,
+        "pred_voxels": 1231697,
+        "gt_voxels": 39189,
+        "suppression_mean": null
+      },
+      "v4_catfix": {
+        "dice": 0.025829604359576448,
+        "precision": 0.013286889626845207,
+        "recall": 0.46117532981193704,
+        "pred_voxels": 1360213,
+        "gt_voxels": 39189,
+        "suppression_mean": null
+      },
+      "v4_probe_full": {
+        "dice": 0.025829374911118624,
+        "precision": 0.013286789378802896,
+        "recall": 0.4611498124473704,
+        "pred_voxels": 1360148,
+        "gt_voxels": 39189,
+        "suppression_mean": 0.502288818359375
+      },
+      "v4_no_suppression": {
+        "dice": 0.0254191177926315,
+        "precision": 0.013058934606422216,
+        "recall": 0.47505677613616065,
+        "pred_voxels": 1425614,
+        "gt_voxels": 39189,
+        "suppression_mean": 0.502288818359375
+      }
+    },
+    "train_13583_d_2.nii.gz::2": {
+      "case": "train_13583_d_2.nii.gz",
+      "index": 2,
+      "category_name": "consolidation",
+      "lesion_name": "consolidation",
+      "raw_prompt": "Consolidation areas showing more confluence",
+      "v3_catfix": {
+        "dice": 0.5379328425868893,
+        "precision": 0.40781835782218334,
+        "recall": 0.7899741766907179,
+        "pred_voxels": 1202452,
+        "gt_voxels": 620757,
+        "suppression_mean": null
+      },
+      "v4_catfix": {
+        "dice": 0.516563609580997,
+        "precision": 0.38340051114969664,
+        "recall": 0.7914514053003027,
+        "pred_voxels": 1281425,
+        "gt_voxels": 620757,
+        "suppression_mean": null
+      },
+      "v4_probe_full": {
+        "dice": 0.5165222603099829,
+        "precision": 0.3833836865079768,
+        "recall": 0.7913289741396392,
+        "pred_voxels": 1281283,
+        "gt_voxels": 620757,
+        "suppression_mean": 0.489654541015625
+      },
+      "v4_no_suppression": {
+        "dice": 0.5133760273795017,
+        "precision": 0.3785368584216632,
+        "recall": 0.7974295900005961,
+        "pred_voxels": 1307693,
+        "gt_voxels": 620757,
+        "suppression_mean": 0.489654541015625
+      }
+    },
+    "train_13292_a_2.nii.gz::0": {
+      "case": "train_13292_a_2.nii.gz",
+      "index": 0,
+      "category_name": "mass",
+      "lesion_name": "pleural effusion",
+      "raw_prompt": "Bilateral pleural effusion, more prominent on the left",
+      "v3_catfix": {
+        "dice": 0.7008875272810152,
+        "precision": 0.5655481251819691,
+        "recall": 0.9213797994997903,
+        "pred_voxels": 2191306,
+        "gt_voxels": 1345036,
+        "suppression_mean": null
+      },
+      "v4_catfix": {
+        "dice": 0.698082883197035,
+        "precision": 0.5592019266925707,
+        "recall": 0.9287409407629238,
+        "pred_voxels": 2233880,
+        "gt_voxels": 1345036,
+        "suppression_mean": null
+      },
+      "v4_probe_full": {
+        "dice": 0.6980955204313628,
+        "precision": 0.559205746600076,
+        "recall": 0.9287751405910325,
+        "pred_voxels": 2233947,
+        "gt_voxels": 1345036,
+        "suppression_mean": 0.56488037109375
+      },
+      "v4_no_suppression": {
+        "dice": 0.69765829202312,
+        "precision": 0.558021060628894,
+        "recall": 0.9305044623340937,
+        "pred_voxels": 2242858,
+        "gt_voxels": 1345036,
+        "suppression_mean": 0.56488037109375
+      }
+    },
+    "train_13292_a_2.nii.gz::1": {
+      "case": "train_13292_a_2.nii.gz",
+      "index": 1,
+      "category_name": "consolidation",
+      "lesion_name": "atelectasis",
+      "raw_prompt": "Atelectasis in both lungs adjacent to the pleural effusion",
+      "v3_catfix": {
+        "dice": 0.005116612244518248,
+        "precision": 0.1441299790356394,
+        "recall": 0.00260453662925605,
+        "pred_voxels": 1908,
+        "gt_voxels": 105585,
+        "suppression_mean": null
+      },
+      "v4_catfix": {
+        "dice": 0.006118525638655773,
+        "precision": 0.12677135197242437,
+        "recall": 0.0031349149973954635,
+        "pred_voxels": 2611,
+        "gt_voxels": 105585,
+        "suppression_mean": null
+      },
+      "v4_probe_full": {
+        "dice": 0.006137067332131799,
+        "precision": 0.12720306513409962,
+        "recall": 0.0031443860396836673,
+        "pred_voxels": 2610,
+        "gt_voxels": 105585,
+        "suppression_mean": 0.50372314453125
+      },
+      "v4_no_suppression": {
+        "dice": 0.00691470337389837,
+        "precision": 0.10902255639097744,
+        "recall": 0.003570582942652839,
+        "pred_voxels": 3458,
+        "gt_voxels": 105585,
+        "suppression_mean": 0.50372314453125
+      }
+    },
+    "train_13292_a_2.nii.gz::2": {
+      "case": "train_13292_a_2.nii.gz",
+      "index": 2,
+      "category_name": "infiltration_or_interstitial_opacity",
+      "lesion_name": "nodule",
+      "raw_prompt": "Subcentimeter centriacinar nodules in the posterior segment of the right upper lobe",
+      "v3_catfix": {
+        "dice": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "pred_voxels": 27,
+        "gt_voxels": 27,
+        "suppression_mean": null
+      },
+      "v4_catfix": {
+        "dice": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "pred_voxels": 66,
+        "gt_voxels": 27,
+        "suppression_mean": null
+      },
+      "v4_probe_full": {
+        "dice": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "pred_voxels": 66,
+        "gt_voxels": 27,
+        "suppression_mean": 0.42547607421875
+      },
+      "v4_no_suppression": {
+        "dice": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "pred_voxels": 68,
+        "gt_voxels": 27,
+        "suppression_mean": 0.42547607421875
+      }
+    }
+  }
+}

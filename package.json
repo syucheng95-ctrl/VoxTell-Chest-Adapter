@@ -1,4 +1,6 @@
 {
+  "name": "voxtell-chest",
+  "version": "0.2.0",
   "dependencies": {
     "docx": "^9.6.1"
   }

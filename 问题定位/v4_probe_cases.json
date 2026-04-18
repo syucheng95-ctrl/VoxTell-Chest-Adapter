@@ -1,0 +1,142 @@
+{
+  "v4_worse_than_v3": [
+    {
+      "case": "train_13577_a_2.nii.gz",
+      "v3_mean_dice": 0.3790235081374322,
+      "v4_mean_dice": 0.3371868978805395,
+      "delta_mean_dice": -0.04183661025689267,
+      "gt_voxels": 533,
+      "pred_voxels_v4": 2581,
+      "item_count": 1,
+      "categories": [
+        "ground_glass_opacity"
+      ],
+      "lesions": [
+        "ground-glass opacity"
+      ]
+    },
+    {
+      "case": "train_13316_a_2.nii.gz",
+      "v3_mean_dice": 0.5476370566867412,
+      "v4_mean_dice": 0.533156132669654,
+      "delta_mean_dice": -0.014480924017087227,
+      "gt_voxels": 4634,
+      "pred_voxels_v4": 6880,
+      "item_count": 2,
+      "categories": [
+        "nodule"
+      ],
+      "lesions": [
+        "nodule"
+      ]
+    }
+  ],
+  "v4_better_than_v3": [
+    {
+      "case": "train_13155_a_2.nii.gz",
+      "v3_mean_dice": 0.0049738444387273815,
+      "v4_mean_dice": 0.10131536036525708,
+      "delta_mean_dice": 0.0963415159265297,
+      "gt_voxels": 37930,
+      "pred_voxels_v4": 5357,
+      "item_count": 3,
+      "categories": [
+        "atelectasis",
+        "emphysema",
+        "nodule"
+      ],
+      "lesions": [
+        "atelectasis",
+        "emphysema",
+        "nodule"
+      ]
+    },
+    {
+      "case": "train_13430_a_2.nii.gz",
+      "v3_mean_dice": 0.3466666666666667,
+      "v4_mean_dice": 0.36752136752136755,
+      "delta_mean_dice": 0.02085470085470087,
+      "gt_voxels": 131,
+      "pred_voxels_v4": 103,
+      "item_count": 1,
+      "categories": [
+        "nodule"
+      ],
+      "lesions": [
+        "nodule"
+      ]
+    }
+  ],
+  "small_target_cases": [
+    {
+      "case": "train_13417_d_1.nii.gz",
+      "v3_mean_dice": 0.0,
+      "v4_mean_dice": 0.0,
+      "delta_mean_dice": 0.0,
+      "gt_voxels": 160,
+      "pred_voxels_v4": 2403,
+      "item_count": 2,
+      "categories": [
+        "atelectasis",
+        "nodule"
+      ],
+      "lesions": [
+        "fibrosis",
+        "nodule"
+      ]
+    },
+    {
+      "case": "train_13444_a_2.nii.gz",
+      "v3_mean_dice": 0.0,
+      "v4_mean_dice": 0.0,
+      "delta_mean_dice": 0.0,
+      "gt_voxels": 196,
+      "pred_voxels_v4": 1,
+      "item_count": 1,
+      "categories": [
+        "nodule"
+      ],
+      "lesions": [
+        "nodule"
+      ]
+    }
+  ],
+  "diffuse_cases": [
+    {
+      "case": "train_13583_d_2.nii.gz",
+      "v3_mean_dice": 0.4119285925361025,
+      "v4_mean_dice": 0.4073294062203019,
+      "delta_mean_dice": -0.004599186315800585,
+      "gt_voxels": 1576032,
+      "pred_voxels_v4": 3358107,
+      "item_count": 3,
+      "categories": [
+        "consolidation",
+        "mass"
+      ],
+      "lesions": [
+        "consolidation",
+        "pleural effusion"
+      ]
+    },
+    {
+      "case": "train_13292_a_2.nii.gz",
+      "v3_mean_dice": 0.23467118083675986,
+      "v4_mean_dice": 0.23460385074715503,
+      "delta_mean_dice": -6.733008960482789e-05,
+      "gt_voxels": 1450648,
+      "pred_voxels_v4": 2234131,
+      "item_count": 3,
+      "categories": [
+        "consolidation",
+        "infiltration_or_interstitial_opacity",
+        "mass"
+      ],
+      "lesions": [
+        "atelectasis",
+        "nodule",
+        "pleural effusion"
+      ]
+    }
+  ]
+}

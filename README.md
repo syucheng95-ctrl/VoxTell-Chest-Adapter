@@ -1,138 +1,134 @@
-# VoxTell-Chest: 胸部专用多模态医疗影像分析方案
+# VoxTell-Chest
 
-本仓库包含参加**生医工大赛**题目 2 的实验方案与改进代码。本项目在开源模型 [VoxTell](https://github.com/mrokuss/VoxTell) 的基础上，针对胸部 CT 影像的复杂病灶与细小解剖结构，设计并实现了一个高度受控的文本引导适配模块 —— **ChestTextGuidedAdapter v2**。
+基于 `VoxTell + nnUNet` 的胸部 CT finding segmentation 项目。项目重点不是重写视觉主干，而是在保持主干稳定的前提下，迭代文本引导 adapter，并尽量解决 `micro_dice` 被 false positive 拖累的问题。
 
-## 🚀 核心技术改进：ChestTextGuidedAdapter v2
+## 当前状态
 
-针对原模型在胸部 CT 细小病灶（如微小结节、间质性改变）分割中存在的“召回率高但精确度低（过分割）”问题，本项目通过两个阶段的迭代，提出了 **Adapter v2** 方案。
+当前已经跑出的主结果：
 
-### 0. 架构图解
-```mermaid
-graph TD
-    %% 输入层
-    subgraph Input_Stage [输入阶段]
-        V_Feat["3D 视觉特征 (B, N, C)"]
-        T_Emb["文本嵌入 (B, N, D)"]
-    end
+| 版本 | Mean Dice | Micro Dice | 说明 |
+| --- | ---: | ---: | --- |
+| Baseline | 0.2139 | 0.4228 | 原始 VoxTell |
+| v2 | 0.2206 | 0.4099 | 第一版有效 adapter 主线 |
+| v4_catfix | 0.2214 | 0.4054 | recall / mean dice 最强，但偏激进 |
+| v5.1 | 0.2209 | 0.4080 | supervision / FP-aware 训练更成熟 |
+| v5.2 (200 step) | 0.1925 | 0.3124 | 更干净但 recall 掉太多 |
+| v6.4_stage3_fix | 0.2141 | 0.4234 | 修复 stage3 后稳定回到 baseline 上方 |
+| v6.5 | 0.2133 | 0.4242 | 当前最高 micro_dice，低 FP 稳健线 |
 
-    %% 适配器内部逻辑
-    subgraph Adapter_v2 [ChestTextGuidedAdapter v2]
-        direction TB
-        F_Norm["LayerNorm (Vision)"]
-        T_Norm["LayerNorm (Text)"]
-        
-        %% 调制分支
-        MLP_Delta["MLP -> Tanh (Delta)"]
-        MLP_Gate["MLP -> Sigmoid * 0.25 (Group Gates)"]
-        
-        %% 门控逻辑
-        Expand["分组门控扩展示 (8 Groups)"]
-        
-        %% 融合
-        Multiply["元素级乘法 (Modulation)"]
-    end
+阶段性结论：
+- `v5.1` 仍是当前 `mean_dice / recall` 最稳的 adapter 主线。
+- `v5.2 / v5.3` 证明“更强 suppression、更弱 category”会让模型更保守，但没有超过 `v5.1`。
+- 更重的 token-grounding / raw-only 文本融合路线在当前数据规模下 full val 不成立，已经降级为探索线。
+- `v6.4` 原始 fullrun 的失败已经定位为 `stage3` 训练设计问题，不再应简单看作结构完全失效。
+- `v6.5` 是当前 `micro_dice` 冠军，但还没有在 `mean_dice / recall` 上超过 `v5.1`。
 
-    %% 输出阶段
-    subgraph Output_Stage [输出阶段]
-        Residual["残差连接 (Residual + 0.1 * Modulated)"]
-        Decoder_In["进入 Transformer Decoder"]
-    end
+## 当前探索线：v6.4 / v6.5
 
-    %% 连线
-    V_Feat --> F_Norm
-    T_Emb --> T_Norm
-    
-    T_Norm --> MLP_Delta
-    T_Norm --> MLP_Gate
-    
-    MLP_Gate --> Expand
-    
-    F_Norm --> Multiply
-    MLP_Delta --> Multiply
-    Expand --> Multiply
-    
-    Multiply --> Residual
-    V_Feat --> Residual
-    Residual --> Decoder_In
+`v6.4` 不再继续做重型 text-grounding，而是在旧 adapter 思路上做一次中等力度的结构升级。
 
-    %% 样式美化
-    style Adapter_v2 fill:#f9f,stroke:#333,stroke-width:2px
-    style Input_Stage fill:#bbf,stroke:#333
-    style Output_Stage fill:#bfb,stroke:#333
+### A. suppression -> explicit FP risk head
+- 原来的 suppression 主要是 feature 级控制项。
+- `v6` 系列把它升级成显式的 `risk head`，直接预测 false-positive risk。
+
+### B. single-shot adapter -> candidate + reject/refine two-stage adapter
+- 原来 adapter 更像一次性调特征。
+- `v6.4` 当前实现是：
+  - `candidate head`：在 **logit 空间**提出候选
+  - `risk head`：在 **logit 空间**做局部误报审查
+  - 弱 `category bias` 只作用于 candidate，不再直接回写 feature
+
+### 当前实现形式
+
+`v6.4` 的 adapter 语义是：
+
+```text
+final_logit = candidate_logit - lambda * risk_logit
 ```
 
-### 1. 结构设计与演进
-- **v1 原型**：采用简单的 FiLM (Feature-wise Linear Modulation) 结构插在 Encoder 之后。实验发现，无约束的文本调制会导致模型过度响应文本描述，产生大面积误报。
-- **v2 (当前最佳)**：
-  - **分组门控机制 (Group Gating)**：将视觉通道分为 8 个组，由文本 Embedding 动态生成每个组的门控权重。这使得模型能够根据病灶类型，选择性地调制特定的视觉特征维度。
-  - **双重强度约束**：引入了 `gate_cap=0.25`（门控上限）和 `residual_scale=0.1`（残差缩放）。这种设计确保了适配器仅对视觉特征进行“精细调优”，而非“推倒重来”，极大地增强了分割边缘的稳定性。
-  - **前移插入点**：将模块从 Decoder 后移至 Pre-decoder 阶段，使文本信息在 3D 特征投影到分割空间前就完成空间约束。
+其中：
+- `candidate_logit` 对应“先提候选”
+- `risk_logit` 对应“再扣高风险误报”
 
-### 2. 代码实现
-核心代码位于：`VoxTell/voxtell/model/chest_text_guided_adapter.py`
-```python
-# 核心调制逻辑
-delta = torch.tanh(self.to_delta(norm_text)) # 生成调制增量
-group_gate = torch.sigmoid(self.to_group_gate(norm_text)) * self.gate_cap # 动态门控
-# 最终融合
-adapted_feature = feature + self.residual_scale * channel_gate * delta * norm_feature
+`v6.5` 在此基础上再加一条很弱的 refine/suppress 头：
+
+```text
+final_logit = candidate_logit - lambda * risk_logit - weak_refine_bias
 ```
 
-## 📊 实验表现与分析
+它的目标不是进一步压结构，而是更平滑地回拉 risky positive。
 
-我们基于 ReXGroundingCT 验证集进行了全量测试（Full Validation），对比了 Baseline 与 Adapter v2 的表现：
+## 代码入口
 
-| 指标 | VoxTell Baseline | **VoxTell + Adapter v2** | 提升 |
-| :--- | :---: | :---: | :---: |
-| **Mean Dice** | 0.2139 | **0.2206** | **+3.1%** |
-| **Micro Dice** | 0.4228 | 0.4099 | - |
-| **Recall (Mean)** | 0.3099 | **0.4380** | **+41.3%** |
+### v6.4 / v6.5 核心结构
+- `VoxTell/voxtell/model/chest_candidate_risk_adapter.py`
+  - `ChestCandidateRiskAdapter`
+  - 实现 logit-level candidate/risk 双头 adapter
+- `VoxTell/voxtell/model/v6_adapter_model.py`
+  - `VoxTellV64AdapterModel`
+  - 保留原 VoxTell decoder/query 主干
+- `VoxTell/voxtell/model/chest_candidate_risk_refine_adapter.py`
+  - `ChestCandidateRiskRefineAdapter`
+  - 在 `candidate + risk` 外增加 bounded refine/suppress 头
+- `VoxTell/voxtell/model/v65_adapter_model.py`
+  - `VoxTellV65AdapterModel`
 
-**结果解读：**
-- **稳健提升**：Adapter v2 在保持 Precision 相对稳定的前提下，显著提升了召回率（Recall），尤其是对于原本容易漏诊的弥漫性病灶（如磨玻璃影 GGO）效果提升明显。
-- **过分割抑制**：相比于 v1 版本和纯 LoRA 微调，v2 成功抑制了由于文本注入导致的无约束膨胀，Mean Dice 的正向增长证明了分组门控机制在医疗影像中的有效性。
+### 训练与验证
+- `scripts/training/train_voxtell_adapter.py`
+  - 当前支持 `--adapter-version v6_4 / v6_5`
+  - 使用 `candidate -> risk -> short joint` 的冻结式训练节奏
+- `scripts/experiments/run_voxtell_val_adapter_raw.py`
+  - 当前支持 `--adapter-version v6_4 / v6_5`
+- `scripts/analysis/evaluate_voxtell_val_adapter_raw.py`
+  - full val 后用于汇总指标
 
-## 🛠️ 环境准备与安装
+## 当前工程状态
 
-本项目依赖于 `torch`、`transformers` 以及 VoxTell 核心库。建议使用 Python 3.10+。
+`v6.4 / v6.5` 当前是：
+- **结构代码已完成**
+- **训练与验证脚本已接入**
+- **静态语法检查已通过**
+- **标准 patch 前向已通过**
+- **`v6.4 fullrun/stage3_fix` 已完成**
+- **`v6.5 full train + full val + evaluate` 已完成**
 
-### 1. 安装基础环境
-我们推荐使用高性能包管理器 `uv`（已包含在项目 `uv.lock` 中）或 `pip`：
-```bash
-# 克隆仓库
-git clone https://github.com/syucheng95-ctrl/VoxTell-Chest-Adapter.git
-cd VoxTell-Chest-Adapter
+已确认通过的检查：
+- `py_compile`
+- 标准 patch 单次前向：
+  - `FORWARD_OK (1, 1, 192, 192, 192)`
+  - `RISK_OK`
+  - `CAND_OK`
 
-# 安装 VoxTell 核心库（开发者模式）
-cd VoxTell
-pip install -e .
+当前结论：
+- `v6.4` 的原始 fullrun 失败主因是 `stage3` 训练设计问题
+- `v6.4_stage3_fix` 修正后：`micro_dice = 0.4234`
+- `v6.5` 进一步拿到：`micro_dice = 0.4242`
+- 但这条线目前仍偏保守，`mean_dice / recall` 还没有超过 `v5.1`
+
+## 常用命令
+
+### 训练
+```powershell
+python scripts\training\train_voxtell_adapter.py --output-dir outputs\some_run --resume-prompt-cache-from outputs\some_previous_run
 ```
 
-### 2. 依赖补充
-确保安装了 docx 报告生成所需的 Node.js 环境（用于运行 `scripts/docx/` 下的脚本）：
-```bash
-npm install
+### 验证
+```powershell
+python scripts\experiments\run_voxtell_val_adapter_raw.py --adapter-run-dir outputs\some_run --output-dir outputs\some_val_dir
+python scripts\analysis\evaluate_voxtell_val_adapter_raw.py --adapter-dir outputs\some_val_dir --output outputs\some_metrics.json
 ```
 
-## 📖 运行指南
+## Prompt Cache 与存储约定
 
-### 训练适配器
-```bash
-# 启动针对胸部 CT 优化的微调流水线
-python scripts/training/train_voxtell_adapter.py
-```
+- 优先复用 `train_prompt_embeddings.pt`
+- `smoke` 只做链路验证，跑完即删
+- 默认不保存 `training_state.pt`
+- 里程碑只保留轻量 `adapter_step_xxxx.pt`
+- 如果最后一步刚好是里程碑，不再双存 `adapter_step_xxxx.pt + adapter_state.pt`
 
-### 推理与性能评估
-```bash
-# 运行验证集推理
-python scripts/experiments/run_voxtell_val_adapter_raw.py
+## 下一步
 
-# 计算详细指标
-python scripts/analysis/evaluate_voxtell_val_adapter_raw.py
-```
-
-## 📝 结论
-通过本项目，我们证明了在医疗 VLM (Vision-Language Model) 中，**“强约束、细粒度”的适配器逻辑**优于“弱约束、全局”的微调逻辑。**ChestTextGuidedAdapter v2** 能够作为一种插件式模块，在不破坏原模型通用语义理解能力的同时，显著增强其在特定解剖区域（胸部）的分割精确度。
-
----
-*本项目为“生医工大赛”参赛作品。如需引用或交流，请联系：23300200012@m.fudan.edu.cn*
+当前最合理的顺序是：
+1. `v5.1` 仍作为 `mean_dice / recall` 主线对照
+2. `v6.5` 作为当前 `micro_dice / 低 FP` 冠军继续推进
+3. 如果继续做 `v6`，重点不是再压 FP，而是在不破坏 `v6.5` 稳定性的前提下把 recall 拉回来

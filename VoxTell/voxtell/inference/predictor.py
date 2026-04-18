@@ -100,9 +100,9 @@ class VoxTellPredictor:
         )
 
         if not isinstance(network, OptimizedModule):
-            network.load_state_dict(checkpoint['network_weights'])
+            network.load_state_dict(checkpoint['network_weights'], strict=False)
         else:
-            network._orig_mod.load_state_dict(checkpoint['network_weights'])
+            network._orig_mod.load_state_dict(checkpoint['network_weights'], strict=False)
         
         network.eval()
         self.network = network
@@ -208,7 +208,13 @@ class VoxTellPredictor:
     def predict_sliding_window_return_logits(
         self,
         input_image: torch.Tensor,
-        text_embeddings: torch.Tensor
+        text_embeddings: torch.Tensor,
+        category_ids: torch.Tensor = None,
+        text_token_embeddings: torch.Tensor = None,
+        text_attention_mask: torch.Tensor = None,
+        category_text_embeddings: torch.Tensor = None,
+        category_token_embeddings: torch.Tensor = None,
+        category_attention_mask: torch.Tensor = None,
     ) -> torch.Tensor:
         """
         Perform sliding window inference to generate segmentation logits.
@@ -216,6 +222,7 @@ class VoxTellPredictor:
         Args:
             input_image: Input image tensor of shape (C, X, Y, Z).
             text_embeddings: Text embeddings from embed_text_prompts.
+            category_ids: Optional (B, N) category indices aligned with prompts.
             
         Returns:
             Predicted logits tensor.
@@ -242,7 +249,16 @@ class VoxTellPredictor:
             slicers = self._internal_get_sliding_window_slicers(data.shape[1:])
 
             predicted_logits = self._internal_predict_sliding_window_return_logits(
-                data, text_embeddings, slicers, self.perform_everything_on_device
+                data,
+                text_embeddings,
+                slicers,
+                self.perform_everything_on_device,
+                category_ids=category_ids,
+                text_token_embeddings=text_token_embeddings,
+                text_attention_mask=text_attention_mask,
+                category_text_embeddings=category_text_embeddings,
+                category_token_embeddings=category_token_embeddings,
+                category_attention_mask=category_attention_mask,
             )
 
             empty_cache(self.device)
@@ -257,6 +273,12 @@ class VoxTellPredictor:
         text_embeddings: torch.Tensor,
         slicers: List[Tuple],
         do_on_device: bool = True,
+        category_ids: torch.Tensor = None,
+        text_token_embeddings: torch.Tensor = None,
+        text_attention_mask: torch.Tensor = None,
+        category_text_embeddings: torch.Tensor = None,
+        category_token_embeddings: torch.Tensor = None,
+        category_attention_mask: torch.Tensor = None,
     ) -> torch.Tensor:
         """
         Internal method for sliding window prediction with Gaussian weighting.
@@ -269,6 +291,7 @@ class VoxTellPredictor:
             text_embeddings: Text embeddings for prompts.
             slicers: List of slice tuples for patch extraction.
             do_on_device: If True, keep all tensors on GPU during computation.
+            category_ids: Optional (B, N) category indices aligned with prompts.
             
         Returns:
             Aggregated prediction logits.
@@ -292,6 +315,18 @@ class VoxTellPredictor:
 
         # move data to device
         data = data.to(results_device)
+        if category_ids is not None:
+            category_ids = category_ids.to(self.device)
+        if text_token_embeddings is not None:
+            text_token_embeddings = text_token_embeddings.to(self.device)
+        if text_attention_mask is not None:
+            text_attention_mask = text_attention_mask.to(self.device)
+        if category_text_embeddings is not None:
+            category_text_embeddings = category_text_embeddings.to(self.device)
+        if category_token_embeddings is not None:
+            category_token_embeddings = category_token_embeddings.to(self.device)
+        if category_attention_mask is not None:
+            category_attention_mask = category_attention_mask.to(self.device)
         queue = Queue(maxsize=2)
         t = Thread(target=producer, args=(data, slicers, queue))
         t.start()
@@ -316,7 +351,16 @@ class VoxTellPredictor:
                     queue.task_done()
                     break
                 patch, tile_slice = item
-                prediction = self.network(patch, text_embeddings)[0].to(results_device)
+                prediction = self.network(
+                    patch,
+                    text_embeddings,
+                    category_ids=category_ids,
+                    text_token_embeddings=text_token_embeddings,
+                    text_attention_mask=text_attention_mask,
+                    category_text_embedding=category_text_embeddings,
+                    category_token_embeddings=category_token_embeddings,
+                    category_attention_mask=category_attention_mask,
+                )[0].to(results_device)
                 prediction *= gaussian
                 predicted_logits[tile_slice] += prediction
                 n_predictions[tile_slice[1:]] += gaussian
@@ -339,7 +383,13 @@ class VoxTellPredictor:
     def predict_single_image(
         self,
         data: np.ndarray,
-        text_prompts: Union[str, List[str]]
+        text_prompts: Union[str, List[str]],
+        category_ids: torch.Tensor = None,
+        text_token_embeddings: torch.Tensor = None,
+        text_attention_mask: torch.Tensor = None,
+        category_text_embeddings: torch.Tensor = None,
+        category_token_embeddings: torch.Tensor = None,
+        category_attention_mask: torch.Tensor = None,
     ) -> np.ndarray:
         """
         Predict segmentation masks for a single image with text prompts.
@@ -364,7 +414,16 @@ class VoxTellPredictor:
         embeddings = self.embed_text_prompts(text_prompts)
 
         # Predict segmentation logits
-        prediction = self.predict_sliding_window_return_logits(data, embeddings).to('cpu')
+        prediction = self.predict_sliding_window_return_logits(
+            data,
+            embeddings,
+            category_ids=category_ids,
+            text_token_embeddings=text_token_embeddings,
+            text_attention_mask=text_attention_mask,
+            category_text_embeddings=category_text_embeddings,
+            category_token_embeddings=category_token_embeddings,
+            category_attention_mask=category_attention_mask,
+        ).to('cpu')
 
         # Postprocess logits to get binary segmentation masks
         with torch.no_grad():
