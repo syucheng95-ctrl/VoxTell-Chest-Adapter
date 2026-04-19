@@ -140,11 +140,28 @@
 - `scripts/experiments/run_voxtell_val_adapter_raw.py`
 - `scripts/analysis/evaluate_voxtell_val_adapter_raw.py`
 
-## 📥 资源下载
+## 🚀 快速资源获取 (Assets)
 
-- 模型 `v1.1`：[Hugging Face](https://huggingface.co/mrokuss/VoxTell/tree/main/voxtell_v1.1)
-- 数据 `Train50`：[ReXRank 官网](https://rexrank.ai/ReXGroundingCT/index.html)
-- 元数据镜像：`datasets/ReXGroundingCT_mirror_meta/`
+本项目所需的所有数据子集、基础模型及已训练好的各版本 Adapter 权重均已统一托管至 ModelScope：
+
+- **资源仓库**：[clover259/VoxTell-Complete-Assets](https://www.modelscope.cn/datasets/clover259/VoxTell-Complete-Assets)
+
+### 环境复现步骤
+为了确保代码能直接运行，请在下载资产仓库后，将对应的文件夹按以下结构摆放在本项目根目录下：
+1. **数据层**：将 `datasets/` 文件夹整体放入根目录。
+2. **基础模型**：将 `models/` 文件夹整体放入根目录。
+3. **已训练权重**：将 `outputs/` 文件夹整体放入根目录。
+
+放置后的目录结构应如下所示：
+```text
+题目2-demo/
+├── datasets/
+├── models/
+├── outputs/
+├── VoxTell/
+└── scripts/
+└── README.md (本文件)
+```
 
 ## 常用命令
 
